@@ -36,7 +36,7 @@
          (match v1
            [(Closure (list fun (list v) -> e ... end) env-save)
             (interp e (ext-env v v2 env-save))]))]
-      [(list e1 op e2)
+      [(list e1 op e2 ...)
        (let ([v1 (interp e1 env)]
              [v2 (interp e2 env)])
          (match op
