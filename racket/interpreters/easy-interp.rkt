@@ -18,7 +18,7 @@
 (struct Closure (fun env))
 
 ;; ----- main code -----
-(define r2
+(define e2
   (lambda (exp)
     (interp exp env0)))
 
@@ -45,3 +45,14 @@
            ['* (* v1 v2)]
            ['/ (/ v1 v2)]))]
       [(list e) (interp e env)])))
+
+(define repl
+  (lambda ()
+    (call/cc 
+     (lambda (k)
+       (display "REPL=>")
+       (let ([exp (read)])
+         (if (not (equal? '(exit) exp))
+             (displayln (e2 exp))
+             (k "exit")))
+       (repl)))))
