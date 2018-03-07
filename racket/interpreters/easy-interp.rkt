@@ -1,58 +1,54 @@
 #lang racket
 
 ;; ----- environment -----
-(define env0 '())
+(define env0
+  (map cons
+       (list '+ '- '* '/)
+       (list  +  -  *  /)))
 
-(define ext-env
-  (λ (x v env)
-    (cons `(,x . ,v) env)))
+(define (ext-env x v env)
+  (cons (cons x v) env))
 
-(define lookup
-  (λ (x env)
-    (let ([p (assq x env)])
-      (cond
-       [(not p) #f]
-       [else (cdr p)]))))
+(define (lookup x env)
+  (let ([p (assq x env)])
+    (cond
+      [(not p) #f]
+      [else (cdr p)])))
 
 ;; ----- data structures -----
-(struct Closure (fun env))
+(struct closure (fun env))
 
 ;; ----- main code -----
-(define e2
-  (lambda (exp)
-    (interp exp env0)))
+(define (e2 exp)
+  (interp exp env0))
 
-(define interp
-  (λ (exp env)
-    (match exp
-      [(? symbol? v)
-       (lookup v env)]
-      [(? number? v) v]
-      [(list fun (list v) -> e ... end)
-       (Closure exp env)]
-      [(list e1 e2)
-       (let ([v1 (interp e1 env)]
-             [v2 (interp e2 env)])
-         (match v1
-           [(Closure (list fun (list v) -> e ... end) env-save)
-            (interp e (ext-env v v2 env-save))]))]
-      [(list e1 op e2 ...)
-       (let ([v1 (interp e1 env)]
-             [v2 (interp e2 env)])
-         (match op
-           ['+ (+ v1 v2)]
-           ['- (- v1 v2)]
-           ['* (* v1 v2)]
-           ['/ (/ v1 v2)]))]
-      [(list e) (interp e env)])))
+(define (interp exp env)
+  (match exp
+    ['(exit) exp]
+    [(? number?) exp]
+    [(? symbol?) (lookup exp env)]
+    [`(,x) (interp x env)]
+    [(list fun (list v) -> e ... end)
+     (closure exp env)]
+    [(list e1 e2)
+     (match (interp e1 env)
+       [(closure (list fun (list v) -> e ... end) env-save)
+        (interp e (ext-env v (interp e2 env) env-save))])]
+    [(list e1 op e2 ...)
+     ((interp op env) (interp e1 env) (interp e2 env))]))
 
-(define repl
-  (lambda ()
-    (call/cc 
-     (lambda (k)
-       (display "REPL=>")
-       (let ([exp (read)])
-         (if (not (equal? '(exit) exp))
-             (displayln (e2 exp))
-             (k "exit")))
-       (repl)))))
+(define (read-loop)
+  (let ([exp (read)])
+    (cond
+      [(equal? exp '|.|) '()]
+      [else (cons exp (read-loop))])))
+
+(define (repl)
+  (display "REPL=>")
+  (let ([result (e2 (read-loop))])
+    (cond
+      [(equal? result '(exit)) "exit"]
+      [else
+       (printf "REPL ⇒ ~a~n" result)
+       (repl)])))
+
