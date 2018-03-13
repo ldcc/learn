@@ -2,9 +2,9 @@
 
 ;;; structure
 
-(struct closure {fun env})
+(struct closure (fun env))
 
-(struct scope {tab sup})
+(struct scope (tab sup))
 
 ;;; env
 
@@ -14,15 +14,19 @@
        (list  +  -  *  /)))
 
 (define lookup
-  (λ (s env)
-    (let ([v (assq s env)])
+  (λ (a env)
+    (let ([v (assq a env)])
       (cond
-        [(not v) (error "unbound variable" )]
+        [(not v) (error (format "unbound variable ~a, env: ~a" a env))]
         [else (cdr v)]))))
 
 (define ext-env
-  (λ (s v env)
-    (cons (cons s v) env)))
+  (λ (a v env)
+    (cons (cons a v) env)))
+
+(define ext-env*
+  (λ (a* v* env*)
+    `(,@(map cons a* v*) ,@env*)))
 
 ;;; main code
 
@@ -32,13 +36,21 @@
       [(? number?) exp]
       [(? symbol?)
        (lookup exp env)]
-      [()]
-      [(list e1 e2 ...)
-       (let ([func (interp e1 env)]
-             [vars (map (λ (x) (interp x env)) e2)])
-         (match func
-           [(? procedure?) (apply func vars)]
-           [_ (error "badmatch" func)]))])))
+      [`(begin ,e* ... ,en)
+       (for ([e e*])
+         (interp e env))
+       (interp en env)]
+      [`(λ ,a ,e ...)
+       (closure `(λ ,a (begin ,@e)) env)]
+      [`(,f ,a ...)
+       (let ([funv (interp f env)]
+             [argv (map (λ (v) (interp v env)) a)])
+         (match funv
+           [(? procedure?)
+            (apply funv argv)]
+           [(closure `(λ ,a* ,e*) env-save)
+            (interp e* (ext-env* a* argv env-save))]
+           [_ (error "badmatch" funv)]))])))
 
 ;; user interface
 
@@ -55,4 +67,3 @@
         [else
          (printf "REPL ⇒ ~a~n" (r3 exp))
          (repl)]))))
-
