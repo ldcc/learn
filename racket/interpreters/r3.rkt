@@ -1,5 +1,11 @@
 #lang racket
 
+;;; structure
+
+(struct closure {fun env})
+
+(struct scope {tab sup})
+
 ;;; env
 
 (define denv
@@ -23,15 +29,15 @@
 (define interp
   (λ (exp env)
     (match exp
+      [(? number?) exp]
       [(? symbol?)
        (lookup exp env)]
-      [(? number?) exp]
+      [()]
       [(list e1 e2 ...)
        (let ([func (interp e1 env)]
              [vars (map (λ (x) (interp x env)) e2)])
          (match func
            [(? procedure?) (apply func vars)]
-           
            [_ (error "badmatch" func)]))])))
 
 ;; user interface
