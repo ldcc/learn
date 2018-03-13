@@ -1,6 +1,6 @@
 %% @author Administrator
 %% @doc ai_sj_mod 用于处理在 desk_sj_mod 中没有实现的具体定义.
--module(sj_ai_mod).
+-module(ai_mod).
 %% TODO 不要让 get_point 到处乱飞
 %% --------------------------------------------------------------------
 %% Include files
@@ -58,8 +58,8 @@ liq_score(?level, Multiple, Seats) ->
 
 %%	根据分数升级,计算金币、积分
 up_level(Mode, Seats, Winner, Score, Base, IsUplevel) ->
-	UpSocre = sj_ai_api:eval_rate(Score) * Base,
-	UpLevel = ?IF(IsUplevel, sj_ai_api:eval_level(Score), 0),
+	UpSocre = ai_api:eval_rate(Score) * Base,
+	UpLevel = ?IF(IsUplevel, ai_api:eval_level(Score), 0),
 	Eval = fun
 			  (#sj_s{score=Score,win_times=Wtimes,level=Level,stand_for=Stf}=SjS) when Stf == Winner ->
 				   begin MaybeLevel = Level + UpLevel, OverLevel = MaybeLevel rem 13 end,
@@ -84,7 +84,7 @@ get_stand_for(Seats, Uid) ->
 %%	获取分数
 get_profit(Seats, Muid, Cards) ->
 	case get_stand_for(Seats, Muid) of
-		?attacker	-> sj_ai_api:get_profit(Cards);
+		?attacker	-> ai_api:get_profit(Cards);
 		?defender	-> 0
 	end.
 	
@@ -97,21 +97,21 @@ leading(#desk{event_ing=?null}=Desk, Seat, Cards) ->
 	#sjc{suit=Suit,point=Point} = hd(Cards),
 	NextUid = next_uid_get(SeatId, Seats),
 	Rs = ?IF(Point == Tp orelse Point > ?ace, Ts, Suit),
-	case sj_ai_api:eq_suit(Ts, Tp, Rs, Cards) of		
+	case ai_api:eq_suit(Ts, Tp, Rs, Cards) of		
 		?false	-> 
 			begin system_api:send_error(Mpid, ?E_GAME_ILLEGAL_PLAY), Desk end;
 		?true	->
-			Points = sj_ai_api:get_point(Ts, Tp, Cards),
+			Points = ai_api:get_point(Ts, Tp, Cards),
 			HcsList = [Hcs || #seat{ext_s=#sj_s{hand_cards=Hcs}} <- lists:keydelete(Uid, #seat.uid, Seats)],
-			PsList = [[sj_ai_api:get_point(Ts, Tp, C) || C <- Hcs, sj_ai_api:eq_suit(Ts, Tp, Rs, C)] || Hcs <- HcsList],
-			MakeMsg = fun(Type, IsSucc, Cs) -> sj_desk_api:msg(?A_DESK_SJ_LEADING, {Uid, IsSucc, ?true, Type, ?justlead, 0, Cs}) end,
-			PointerMsg = sj_desk_api:msg(?A_DESK_SJ_CARDS_EVENT, {NextUid, ?alt_pointer, []}),
-			case {sj_ai_api:get_type(Points), sj_ai_api:throw(Points, PsList)} of
+			PsList = [[ai_api:get_point(Ts, Tp, C) || C <- Hcs, ai_api:eq_suit(Ts, Tp, Rs, C)] || Hcs <- HcsList],
+			MakeMsg = fun(Type, IsSucc, Cs) -> desk_api:msg(?A_DESK_SJ_LEADING, {Uid, IsSucc, ?true, Type, ?justlead, 0, Cs}) end,
+			PointerMsg = desk_api:msg(?A_DESK_SJ_CARDS_EVENT, {NextUid, ?alt_pointer, []}),
+			case {ai_api:get_type(Points), ai_api:throw(Points, PsList)} of
 				{?CONST_SJ_XW_THROW, Rcards} when Rcards /= ?true	->	% 甩牌失败
 					system_api:send_error(Mpid, ?E_ADD_ERROR25),
 					RealRcards = [Card#sjc{ref_point=0} || Card <- Rcards],
 					desk_api:broadcast(Desk, MakeMsg(?CONST_SJ_XW_THROW, ?false, Cards)),
-					TmpMsg = MakeMsg(sj_ai_api:get_type(RealRcards), ?true, RealRcards),
+					TmpMsg = MakeMsg(ai_api:get_type(RealRcards), ?true, RealRcards),
 					Delay = {fun desk_api:broadcast/2, [self(), <<TmpMsg/?binary, PointerMsg/?binary>>], ?three},
 					lead(Desk#desk{curr_uid=NextUid,event_ing=#de{seat_idx=Uid},delay=[Delay|Delays]}, Seat, RealRcards, ?true, ?justlead);
 				{Type, _Val} ->
@@ -127,11 +127,11 @@ leading(Desk, Seat, Cards) ->
 	#sj_s{defeat_times=Dtimes} = SjS,
 	Rcards = element(?three, hd(Elist)),
 	NextUid = next_uid_get(SeatId, Seats),	
-	Points = sj_ai_api:get_point(Ts, Tp, Cards),
-	Type = sj_ai_api:get_type(Points),
-	PointerMsg = ?IF(length(Elist) < ?three, sj_desk_api:msg(?A_DESK_SJ_CARDS_EVENT, {NextUid, ?alt_pointer, []}), <<>>),
+	Points = ai_api:get_point(Ts, Tp, Cards),
+	Type = ai_api:get_type(Points),
+	PointerMsg = ?IF(length(Elist) < ?three, desk_api:msg(?A_DESK_SJ_CARDS_EVENT, {NextUid, ?alt_pointer, []}), <<>>),
 	MakeArgs = fun(MaxUid, Action) -> {Uid, ?true, ?false, Type, Action, MaxUid, Cards} end,
-	Broadcast = fun(MsgId, Args) -> desk_api:broadcast(Desk, <<(sj_desk_api:msg(MsgId, Args))/?binary, PointerMsg/?binary>>) end,
+	Broadcast = fun(MsgId, Args) -> desk_api:broadcast(Desk, <<(desk_api:msg(MsgId, Args))/?binary, PointerMsg/?binary>>) end,
 	case check_valid(Seat, Ts, Tp, Rcards, Cards) of
 		invalid		-> 
 			begin system_api:send_error(Mpid, ?E_GAME_ILLEGAL_PLAY), Desk end;
@@ -139,10 +139,10 @@ leading(Desk, Seat, Cards) ->
 			Broadcast(?A_DESK_SJ_LEADING, MakeArgs(Muid, ?justlead)),
 			lead(Desk#desk{curr_uid=NextUid}, Seat, Cards, ?false, ?justlead);
 		compare		->
-			Rps = sj_ai_api:get_point(Ts, Tp, Rcards),
-			MaxPs = sj_ai_api:get_point(Ts, Tp, Mcards),
-			IsBiggest = sj_ai_api:lead(Points, MaxPs, Rps) /= ?true,
-			Action = sj_ai_api:lead_action(Ts, Tp, Cards, Rcards, Mcards, IsBiggest),
+			Rps = ai_api:get_point(Ts, Tp, Rcards),
+			MaxPs = ai_api:get_point(Ts, Tp, Mcards),
+			IsBiggest = ai_api:lead(Points, MaxPs, Rps) /= ?true,
+			Action = ai_api:lead_action(Ts, Tp, Cards, Rcards, Mcards, IsBiggest),
 			DtimesNew = ?IF(Action /= ?justlead, Dtimes + ?one, Dtimes),
 			Broadcast(?A_DESK_SJ_LEADING, MakeArgs(?IF(IsBiggest, Uid, Muid),Action)),
 			lead(Desk#desk{curr_uid=NextUid}, Seat#seat{ext_s=SjS#sj_s{defeat_times=DtimesNew}}, Cards, IsBiggest, Action)
@@ -156,7 +156,7 @@ lead(Desk, Seat, Cards, IsBiggest, Action) ->
 	#sj_s{tractor_times=Ttimes} = SjS,
 	EmaxNew = ?IF(IsBiggest, {Uid, Cards}, Emax),
 	EingNew = Eing#de{event_list=Elist++[{Action, Uid, Cards}],event_finish=EmaxNew},
-	TtimesNew = sj_ai_api:get_tractor_times(Ts, Tp, element(?three, lists:unzip3(Elist)), Cards) + Ttimes,
+	TtimesNew = ai_api:get_tractor_times(Ts, Tp, element(?three, lists:unzip3(Elist)), Cards) + Ttimes,
 	SeatNew = Seat#seat{ext_s=SjS#sj_s{hand_cards=HandCards--Cards,tractor_times=TtimesNew}},
 	SeatsNew = lists:keyreplace(Uid, #seat.uid, Seats, SeatNew),
 	Desk#desk{seat_list=SeatsNew,event_ing=EingNew}.
@@ -167,24 +167,24 @@ check_valid(Seat, Ts, Tp, Rcards, Cards) when length(Rcards) == length(Cards) ->
 	#seat{ext_s=#sj_s{hand_cards=Hcs}} = Seat,
 	[#sjc{suit=Suit,point=Point} | _] = Rcards,
 	Rs = ?IF(Point == Tp orelse Point > ?ace, Ts, Suit),
-	Psg = sj_ai_api:group(sj_ai_api:get_point(Ts, Tp, Cards)),
-	Rpsg = sj_ai_api:group(sj_ai_api:get_point(Ts, Tp, Rcards)),
-	Hpsg = sj_ai_api:group([sj_ai_api:get_point(Ts, Tp, C) || C <- Hcs, sj_ai_api:eq_suit(Ts, Tp, Rs, C)]),
-	case sj_ai_api:eq_suit(Ts, Tp, Rs, Cards) of
+	Psg = ai_api:group(ai_api:get_point(Ts, Tp, Cards)),
+	Rpsg = ai_api:group(ai_api:get_point(Ts, Tp, Rcards)),
+	Hpsg = ai_api:group([ai_api:get_point(Ts, Tp, C) || C <- Hcs, ai_api:eq_suit(Ts, Tp, Rs, C)]),
+	case ai_api:eq_suit(Ts, Tp, Rs, Cards) of
 		?false	-> 
-			case [C || C <- Hcs, sj_ai_api:eq_suit(Ts, Tp, Rs, C)] -- Cards of
+			case [C || C <- Hcs, ai_api:eq_suit(Ts, Tp, Rs, C)] -- Cards of
 				[]	->
-					case sj_ai_api:eq_suit(Ts, Tp, Ts, Cards) of
-						?true	-> ?IF(sj_ai_api:check_same_type(Rpsg, Psg), compare, justlead);
+					case ai_api:eq_suit(Ts, Tp, Ts, Cards) of
+						?true	-> ?IF(ai_api:check_same_type(Rpsg, Psg), compare, justlead);
 						?false	-> justlead
 					end;
 				_	-> 
 					invalid
 			end;
 		?true	->
-			case sj_ai_api:check_same_type(Rpsg, Psg) of
+			case ai_api:check_same_type(Rpsg, Psg) of
 				?true	-> compare;
-				?false	-> ?IF(sj_ai_api:check_have_unlead(Hpsg, Rpsg, Psg), invalid, justlead)
+				?false	-> ?IF(ai_api:check_have_unlead(Hpsg, Rpsg, Psg), invalid, justlead)
 			end
 	end;
 check_valid(_Seat, _Ts, _Tp, _Rcards, _Cards) ->
@@ -195,13 +195,13 @@ check_valid(_Seat, _Ts, _Tp, _Rcards, _Cards) ->
 prompt(Ts, Tp, WholeHcs, Rcs) ->
 	#sjc{suit=Suit,point=Point} = hd(Rcs),
 	Rs = ?IF(Point == Tp orelse Point > ?ace, Ts, Suit),
-	Hcs = [C || C <- WholeHcs, sj_ai_api:eq_suit(Ts, Tp, Rs, C)],
- 	Hps = [sj_ai_api:get_point(Ts, Tp, C) || C <- Hcs],	
-	Rps = [sj_ai_api:get_point(Ts, Tp, C) || C <- Rcs],
-	Hpsg = [lists:reverse(Psl) || Psl <- sj_ai_api:group(Hps)],
-	Rpsg = sj_ai_api:group(Rps),
+	Hcs = [C || C <- WholeHcs, ai_api:eq_suit(Ts, Tp, Rs, C)],
+ 	Hps = [ai_api:get_point(Ts, Tp, C) || C <- Hcs],	
+	Rps = [ai_api:get_point(Ts, Tp, C) || C <- Rcs],
+	Hpsg = [lists:reverse(Psl) || Psl <- ai_api:group(Hps)],
+	Rpsg = ai_api:group(Rps),
 	case length(Hps) > length(Rps) of
-		?true	-> lists:flatten(sj_ai_api:find_occur(Hpsg, Rpsg));
+		?true	-> lists:flatten(ai_api:find_occur(Hpsg, Rpsg));
 		?false	-> []
 	end.
 
@@ -275,10 +275,10 @@ make_vote_msg(_Else, _Uid) ->
 
 %% 生成出牌信息
 make_open_msg(Ts, Tp, #de{seat_idx=Fuid,event_list=Elist,event_finish={Muid,_Mcards}}) ->
-	GetType = fun(Cs) -> sj_ai_api:get_type(sj_ai_api:get_point(Ts, Tp, Cs)) end,
+	GetType = fun(Cs) -> ai_api:get_type(ai_api:get_point(Ts, Tp, Cs)) end,
 	MakeArgs = fun({Act, Uid, Cs}) -> {Uid, ?true, Uid == Fuid, GetType(Cs), Act, Muid, Cs} end,
 	Bin1 = msg:encode([{?int8u, length(Elist)}]),
-	Bin2 = iolist_to_binary([sj_desk_api:msg_group(?A_DESK_SJ_LEADING, MakeArgs(Stuff)) || Stuff <- Elist]),
+	Bin2 = iolist_to_binary([desk_api:msg_group(?A_DESK_SJ_LEADING, MakeArgs(Stuff)) || Stuff <- Elist]),
 	<<Bin1/?binary, Bin2/?binary>>;
 make_open_msg(_Ts, _Tp, ?null) ->
 	<<0>>.

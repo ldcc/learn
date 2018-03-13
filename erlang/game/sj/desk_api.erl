@@ -3,7 +3,7 @@
 %%% File    : desk_sj_api.erl
 %%% Created : 
 %%% -------------------------------------------------------------------
--module(sj_desk_api).
+-module(desk_api).
 
 -behaviour(gamecore_api).
 %% --------------------------------------------------------------------
@@ -112,14 +112,14 @@ msg(?A_DESK_SJ_RECONNECT_INFO, {Desk, Seat})->
 	#sj_d{lord_data={Luid,Lcards},profit=Profit,trump_suit=Ts,trump_point=Tp} = Desk#desk.ext_d,
 	#seat{uid=Uid,ext_s=#sj_s{hand_cards=Hcs}} = Seat,
 	VoteInfo = lists:keyfind(?CONST_VIPM_VOTE_TYPE_DISSOLVE, #vote_info.vote_type, Votes),
-	MsgVote = sj_ai_mod:make_vote_msg(VoteInfo, Uid),
+	MsgVote = ai_mod:make_vote_msg(VoteInfo, Uid),
 	MsgScore = msg_group(?A_DESK_SJ_SCORE_DATA, {Profit, ?zero}),
 	MsgGame = msg_group(?A_DESK_SJ_GAME_DATA, {GameState, Bidx, Btotal, Buid, Tp, Seats}),
 	MsgPrompt = msg_group(?A_DESK_SJ_CARDS_EVENT, {Cuid, ?alt_pointer, []}),
 	MsgHcs = msg_group(?A_DESK_SJ_CARDS_EVENT, {Uid, ?dealing, Hcs}),
 	MsgLord = msg_group(?A_DESK_SJ_CARDS_EVENT, {Luid, ?justlord, Lcards}),
 	MsgBury = <<(msg:encode([{?bool, Flip == []}]))/?binary, (msg_group(?A_DESK_SJ_CARDS_EVENT, {Buid, ?burying, ?IF(Uid == Buid, Flip, [])}))/?binary>>,
-	MsgOpen = sj_ai_mod:make_open_msg(Ts, Tp, Eing),
+	MsgOpen = ai_mod:make_open_msg(Ts, Tp, Eing),
 	BinAcc = <<MsgVote/?binary, MsgScore/?binary, MsgGame/?binary, MsgPrompt/?binary, MsgHcs/?binary, MsgLord/?binary, MsgBury/?binary, MsgOpen/?binary>>,
 	msg:msg(?A_DESK_SJ_RECONNECT_INFO, BinAcc);
 
@@ -262,7 +262,7 @@ offline(Desk, _Uid)->
 reconnect(Desk, Gate) ->
 	#desk{game_id=GameId,seat_list=SeatsOld,event_wait=Des} = Desk,
 	SeatTmp = vipm_api:vipm_seat_record(Gate, GameId, ?null),
-	SeatsNew = [#seat{seat_id=SeatId}|_Tail] = sj_ai_mod:seats_renew(SeatsOld, SeatTmp),
+	SeatsNew = [#seat{seat_id=SeatId}|_Tail] = ai_mod:seats_renew(SeatsOld, SeatTmp),
 	case lists:keytake(SeatId, #de.seat_idx, Des) of
 		?false				-> 
 			{?noreply, Desk#desk{seat_list=SeatsNew}};
@@ -328,8 +328,8 @@ load_cb(Desk, {Uid, Mpid, IsReconn}) ->
 		?CONST_SCENE_TYPE_GOLD	-> 
 			?skip;
 		?CONST_SCENE_TYPE_KA	->
-			[msg:send(Mpid, sj_ai_mod:make_seat_msg(Desk, Seat)) || Seat <- Seats],
-			msg:send(Mpid, sj_ai_mod:make_desk_msg(Desk));
+			[msg:send(Mpid, ai_mod:make_seat_msg(Desk, Seat)) || Seat <- Seats],
+			msg:send(Mpid, ai_mod:make_desk_msg(Desk));
 		?CONST_SCENE_TYPE_GROUP	-> 
 			?skip
 	end,
@@ -359,7 +359,7 @@ eventing_cb(Desk, {Behavior, Uid, Mpid, Cards}) ->
 				Seat	->
 					#seat{ext_s=#sj_s{hand_cards=Hcs}} = Seat,
 					case length(Hcs -- Cards) == length(Hcs) - length(Cards) of
-						?true	-> DeskNew = sj_desk_mod:eventing(Desk, Behavior, Seat, Cards);
+						?true	-> DeskNew = desk_mod:eventing(Desk, Behavior, Seat, Cards);
 						?false	-> DeskNew = SendError(?E_ADD_ERROR12)
 					end,
 					{?noreply, DeskNew#desk{time_last=util_time:seconds()}}
@@ -371,7 +371,7 @@ eventing_cb(Desk, {Behavior, Uid, Mpid, Cards}) ->
 wechat_share_cb(Desk, Mpid) ->
 	#desk{bout_total=Btotal,seat_list=Seats,ext_d=SjD,ext_dm=SjDm} = Desk,
 	{#sj_d{}, #sj_dm{game_mode=Mode,is_uplevel=IsLevelup,default_level=DefLevel}} = {SjD, SjDm},
-	msg:send(Mpid, sj_vipm_api:msg(?A_VIPM_SJ_WECHAT_SHARE, {Mode, Btotal, IsLevelup, DefLevel, Seats})),
+	msg:send(Mpid, vipm_api:msg(?A_VIPM_SJ_WECHAT_SHARE, {Mode, Btotal, IsLevelup, DefLevel, Seats})),
 	{?noreply, Desk}.
 
 
@@ -383,7 +383,7 @@ wechat_share_cb(Desk, Mpid) ->
 %%	开始游戏
 game_on(Desk) ->
 	DeskNew = Desk#desk{is_start_game=?true,is_cancle_dismiss=?true,state=?GAME_LORD,state_time=?zero},
-	sj_desk_mod:game_on(DeskNew#desk{bout_idx=DeskNew#desk.bout_idx+?one}).
+	desk_mod:game_on(DeskNew#desk{bout_idx=DeskNew#desk.bout_idx+?one}).
 
 
 %%	亮主阶段
@@ -391,11 +391,11 @@ lording(Desk) ->
 	#desk{state_time=StateTime} = Desk,
 	case StateTime of
 		?zero	->
-			sj_desk_mod:deal_card(Desk);
+			desk_mod:deal_card(Desk);
 		Time when Time < 15	->
 			Desk#desk{state_time=Time+?one};
 		StateTime	->
-			sj_desk_mod:bury_card(Desk) 
+			desk_mod:bury_card(Desk) 
 	end.
 
 
@@ -403,7 +403,7 @@ lording(Desk) ->
 leading(Desk) ->
 	case Desk#desk.event_ing of
 		#de{event_list=Elist} when length(Elist) == ?CONST_SJ_GAME_STATE_NUM_PLAYER	-> 
-			sj_desk_mod:round_over(Desk);
+			desk_mod:round_over(Desk);
 		_Otherwise	-> 
 			Desk
 	end.
@@ -411,6 +411,6 @@ leading(Desk) ->
 
 %%	游戏结束
 game_over(Desk) ->
-	DeskNew = sj_desk_mod:game_over(Desk),
-	sj_ai_mod:send_vslogs_msg(DeskNew),
+	DeskNew = desk_mod:game_over(Desk),
+	ai_mod:send_vslogs_msg(DeskNew),
 	DeskNew.

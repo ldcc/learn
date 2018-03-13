@@ -4,7 +4,7 @@
 %%% Created : 
 %%% -------------------------------------------------------------------
 
--module(sybp_vipm_api).
+-module(vipm_api).
 
 -behaviour(gamecore_api).
 %% --------------------------------------------------------------------
@@ -164,7 +164,7 @@ cache_set(Gate,Data)->
 doloop(#desk{state=?DISBAND_ROOM}=Desk) ->
 	all_calculation(Desk);
 doloop(Desk) ->
-	case sybp_desk_api:doloop(Desk) of
+	case desk_api:doloop(Desk) of
 		{?noreply, DeskTmp}			->
 			case Desk#desk.state of
 				?GAME_OVER	->
@@ -185,7 +185,7 @@ vipm_join(Desk, Seat)->
 	#desk{master_uid=MasterUid,game_id=GameId,room_id=RoomId,desk_id=DeskId,vipm_key=VipmKey,ext_d=ExtD,seat_list=Seats} = Desk,
 	#zpsybp_d{player_limit=PlayerLimit} = ExtD,
 	#seat{uid=Uid,uname=Uname,mpid=Mpid,icon_url=IconUrl} = Seat,
-	NewSeats = [NewSeat|_] = sybp_ai_mod:seats_renew(Seats, Seat, PlayerLimit),
+	NewSeats = [NewSeat|_] = ai_mod:seats_renew(Seats, Seat, PlayerLimit),
 	case lists:keymember(Uid, #seat.uid, Seats) of
 		?true	->
 			msg:send(Mpid, desk_api:msg(?A_DESK_JOIN_OK, {GameId, DeskId, VipmKey, ?true})),
@@ -195,8 +195,8 @@ vipm_join(Desk, Seat)->
 			case length(Seats) < PlayerLimit of
 				?true	->
 					msg:send(Mpid, desk_api:msg(?A_DESK_JOIN_OK, {GameId, DeskId, VipmKey, ?false})),
-					desk_api:broadcast(Desk, sybp_ai_mod:make_seat_msg(Desk, NewSeat)),
-					desk_api:broadcast(Desk, sybp_ai_mod:make_desk_msg(Desk)),
+					desk_api:broadcast(Desk, ai_mod:make_seat_msg(Desk, NewSeat)),
+					desk_api:broadcast(Desk, ai_mod:make_desk_msg(Desk)),
 					desk_api:join_user_ok(Uid, self(), RoomId, DeskId, GameId),
 					UidInfo = #so{uid=Uid,uname=Uname,icon_url=IconUrl},
 					dcfg:rpc_cast_hub(vipm_ctrl_api, vipm_add, [VipmKey, UidInfo]),
@@ -212,7 +212,7 @@ vipm_join(Desk, Seat)->
 
 %%	游戏结束
 gameover(Desk) ->
-	begin sybp_ai_mod:save_vslogs_db(Desk), Desk end.
+	begin ai_mod:save_vslogs_db(Desk), Desk end.
 
 
 
@@ -220,10 +220,10 @@ gameover(Desk) ->
 all_calculation(Desk) ->
 	#desk{master_uid=MasterUid,time_create=Begin,vipm_key=RoomKey,seat_list=Seats,bout_idx=BoutIdx} = Desk,
 	{Begin, End} = {Desk#desk.time_create, util_time:seconds()},
-	SoList = sybp_ai_mod:make_so_list(Seats),
+	SoList = ai_mod:make_so_list(Seats),
 	dcfg:rpc_cast_hub(vipm_ctrl_api, vipm_update, [RoomKey, ?two, BoutIdx, SoList]), 
-	Liquidations = sybp_ai_mod:make_liquidation_infos(Seats),  
-	desk_api:broadcast(Desk, sybp_vipm_api:msg(?A_VIPM_ZPSYBP_LIQUIDATION, {RoomKey, Begin, End, BoutIdx, Liquidations})),
+	Liquidations = ai_mod:make_liquidation_infos(Seats),  
+	desk_api:broadcast(Desk, vipm_api:msg(?A_VIPM_ZPSYBP_LIQUIDATION, {RoomKey, Begin, End, BoutIdx, Liquidations})),
 	vipm_api:notify_reflesh(MasterUid),
 	{?stop, ?normal, Desk}.
 

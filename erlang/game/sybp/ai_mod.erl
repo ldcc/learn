@@ -1,6 +1,6 @@
 %% @author Administrator
 %% @doc @todo Add description to ai_zpsybp_mod.
--module(sybp_ai_mod).
+-module(ai_mod).
 
 %% --------------------------------------------------------------------
 %% Include files
@@ -38,7 +38,7 @@ seats_renew(Seats, SeatTmp, PlayerLimit) ->
 %%	检查牌事件
 check_event(HandDeal, OpenDeal, PassDeal, FocusCard, Events) ->
 	{HDFlatten, ODFlatten} = {lists:flatten(HandDeal), OpenDeal},
-	Fun = fun (Event) -> {Event, sybp_ai_api:check_event(Event, HDFlatten, ODFlatten, FocusCard, PassDeal)} end,
+	Fun = fun (Event) -> {Event, ai_api:check_event(Event, HDFlatten, ODFlatten, FocusCard, PassDeal)} end,
 	[{Event, Deal} || {Event, Deal} <- lists:map(Fun, Events), Deal =/= [], Deal =/= ?null].
 
 
@@ -46,12 +46,12 @@ check_event(HandDeal, OpenDeal, PassDeal, FocusCard, Events) ->
 %%	提跑后胡
 check_hu(HandDeal, OpenDeal, RealHuCard) ->
 	GuessCard = hd([Card || Card <- lists:flatten(HandDeal), Card =/= []]),
-	HandDealNew = sybp_ai_api:deep_rember([GuessCard], HandDeal),
+	HandDealNew = ai_api:deep_rember([GuessCard], HandDeal),
 	check_hu(HandDealNew, OpenDeal, RealHuCard, GuessCard).
 
 %%	直接胡
 check_hu(HandDeal, OpenDeal, RealHuCard, GuessCard) ->
-	case sybp_ai_api:event_handler(HandDeal, OpenDeal, GuessCard, ?CONST_ZPSYBP_CARD_STATE_WIN) of
+	case ai_api:event_handler(HandDeal, OpenDeal, GuessCard, ?CONST_ZPSYBP_CARD_STATE_WIN) of
 		[]		-> [];
 		HuDeal	->
 			{Opens, Hus} = lists:split(length(OpenDeal), lists:reverse(HuDeal)),
@@ -72,12 +72,12 @@ handle_event(Desk, Seat, [HuCard], ?CONST_ZPSYBP_CARD_STATE_WIN) ->
 		?null					-> 
 			HuDeal = ?IF(HuDealOld == ?null, check_hu(HdO, OdO, HuCard, GuessCard), HuDealOld);
 		{SeatId, State, Deal}	->
-			{HdN, OdN, _} = sybp_ai_api:event_handler(HdO, OdO, [Deal], State),	
+			{HdN, OdN, _} = ai_api:event_handler(HdO, OdO, [Deal], State),	
 			case check_hu(HdN, OdN, HuCard) of
 				[]		->
 					HuDeal = check_hu(HdO, OdO, HuCard, GuessCard);
 				HuDeal	-> 
-					sybp_desk_mod:handle_event(Desk#desk{event_wait=[MyDe],event_ing=MyDe}, Seat, {State, Deal})
+					desk_mod:handle_event(Desk#desk{event_wait=[MyDe],event_ing=MyDe}, Seat, {State, Deal})
 			end
 	end,
 	case Discarded of
@@ -90,7 +90,7 @@ handle_event(Desk, Seat, [HuCard], ?CONST_ZPSYBP_CARD_STATE_WIN) ->
 		Discarded	->
 			HuData = ?justhu
 	end,
-	HuCurr = sybp_ai_api:profit_curr_get(HuDeal) + element(?two, HuData),
+	HuCurr = ai_api:profit_curr_get(HuDeal) + element(?two, HuData),
 	{HaN, HtN, SdtN} = {HaO + HuCurr, HtO + ?one, ?IF(HuData == ?selfdraw, SdtO + ?one, SdtO)},
 	SeatNew = Seat#seat{ext_s=ExtS#zpsybp_s{hand_deal=[],open_deal=HuDeal,hu_curr=HuCurr,hu_acc=HaN,hu_times=HtN,sd_times=SdtN}},
 	SeatsTmp = [Seat#seat{ext_s=ExtS#zpsybp_s{hu_curr=?zero}} || #seat{ext_s=ExtS}=Seat <- Seats],
@@ -105,29 +105,29 @@ handle_event(Desk, Seat, Deal, State) ->
 	#zpsybp_s{hand_deal=HandDeal,open_deal=OpenDeal,ti_times=TiTimes,pao_times=PaoTimes} = ExtS,	
 	Deals = ?IF(State == ?CONST_ZPSYBP_CARD_STATE_CHI, util:lists_split(Deal, ?three), [Deal]),
 %% 	Deals = ?IF(State == ?CONST_ZPSYBP_CARD_STATE_CHI, ai_zpsybp_api:append_by(fun(_, Deal) -> length(Deal) < ?three end, Deal, []), [Deal]),
-	{HandDealNew, OpenDealNew, DeskState} = sybp_ai_api:event_handler(HandDeal, OpenDeal, Deals, State),
-	HuCurr = sybp_ai_api:profit_hide_find(HandDealNew) + sybp_ai_api:profit_curr_get(OpenDealNew),
+	{HandDealNew, OpenDealNew, DeskState} = ai_api:event_handler(HandDeal, OpenDeal, Deals, State),
+	HuCurr = ai_api:profit_hide_find(HandDealNew) + ai_api:profit_curr_get(OpenDealNew),
 	TiTimesNew = ?IF(lists:member(State, ?TIS), TiTimes + ?one, TiTimes),
 	PaoTimesNew = ?IF(lists:member(State, ?PAOS), PaoTimes + ?one, PaoTimes),
 	SeatNew = Seat#seat{ext_s=ExtS#zpsybp_s{hand_deal=HandDealNew,open_deal=OpenDealNew,hu_curr=HuCurr,ti_times=TiTimesNew,pao_times=PaoTimesNew}},
-	msg:send(Mpid, sybp_vipm_api:msg(?A_VIPM_ZPSYBP_INTO_EXT, SeatNew)),
+	msg:send(Mpid, vipm_api:msg(?A_VIPM_ZPSYBP_INTO_EXT, SeatNew)),
 	SeatsTmp = lists:keyreplace(SeatId, #seat.seat_id, Seats, SeatNew),
 	case State == ?CONST_ZPSYBP_CARD_STATE_WPAO andalso Method == ?discard of
 		?false	->
 			SeatsNew = SeatsTmp;
 		?true	->
 			{?value, #seat{ext_s=DisExtS}=Discarder, Tail} = lists:keytake(LastIdx, #seat.seat_id, SeatsTmp),
-			DisPass = [Card#bpc{state=State} || Card <- sybp_ai_api:get_pai_case(), State <- ?PASS],
+			DisPass = [Card#bpc{state=State} || Card <- ai_api:get_pai_case(), State <- ?PASS],
 			SeatsNew = [Discarder#seat{ext_s=DisExtS#zpsybp_s{pass_deal=DisPass}} | Tail]
 	end,
 	ExtDNew = ExtD#zpsybp_d{focus_card=[],focus_method=?alt_pointer},
 	DeskNew = Desk#desk{event_wait=[],event_ing=?null,state=DeskState,seat_list=SeatsNew,curr_seat_idx=SeatId,ext_d=ExtDNew},
 	case Method == ?discard andalso lists:member(State, ?PAOS) of
 		?true	->
-			DeskNew#desk{delay=[{fun sybp_ai_mod:send_event_msg/2, [SeatId, Deals], ?one} | Delays]};
+			DeskNew#desk{delay=[{fun ai_mod:send_event_msg/2, [SeatId, Deals], ?one} | Delays]};
 		?false	->
 			Satis = DeskState == ?DISCARDING andalso not lists:member(State, ?AUTO_EVENTS), 
-			EventMsg = ?IF(Satis, sybp_desk_api:msg(?A_DESK_ZPSYBP_DISCARD, {SeatId, ?alt_pointer, []}), <<>>),
+			EventMsg = ?IF(Satis, desk_api:msg(?A_DESK_ZPSYBP_DISCARD, {SeatId, ?alt_pointer, []}), <<>>),
 			begin desk_api:broadcast(Desk, EventMsg), send_event_msg(SeatId, Deals), DeskNew end
 	end.
 
@@ -175,7 +175,7 @@ auto_event_check(Des) ->
 	EventsOld = lists:append([[{I, E, D} || {E, D} <- Es] || #de{event_list=Es,seat_idx=I} <- Des]),
 	EventsNew = lists:sort(fun({_, E1, _}, {_, E2, _}) -> E1 > E2 end, EventsOld),
 	Pred = fun({I, E, D}) -> ?IF(lists:member(E, ?AUTO_EVENTS), {I, E, D}, ?false) end,
-	case sybp_ai_api:any(Pred, EventsNew) of
+	case ai_api:any(Pred, EventsNew) of
 		[]		-> ?null;
 		Stuff	-> auto_event_check(Stuff, [I || {I, ?CONST_ZPSYBP_CARD_STATE_WIN, _} <- EventsNew])
 	end.
@@ -285,11 +285,11 @@ send_event_msg(SeatId, [Deal | Deals]) when is_list(Deal) ->
 
 send_event_msg(SeatId, Deal, State) 
   when State == ?CONST_ZPSYBP_CARD_STATE_WEI; State == ?CONST_ZPSYBP_CARD_STATE_WTI; State == ?CONST_ZPSYBP_CARD_STATE_TI ->
-	desk_api:broadcast(self(), sybp_desk_api:msg(?A_DESK_ZPSYBP_DEAL_GROUP, {SeatId, ?eventing, [make_dark_deal(Deal)]}));
+	desk_api:broadcast(self(), desk_api:msg(?A_DESK_ZPSYBP_DEAL_GROUP, {SeatId, ?eventing, [make_dark_deal(Deal)]}));
 send_event_msg(SeatId, Deal, ?CONST_ZPSYBP_CARD_STATE_WEI) ->
-	desk_api:broadcast(self(), sybp_desk_api:msg(?A_DESK_ZPSYBP_DEAL_GROUP, {SeatId, ?eventing, [make_empty_deal(Deal)]}));
+	desk_api:broadcast(self(), desk_api:msg(?A_DESK_ZPSYBP_DEAL_GROUP, {SeatId, ?eventing, [make_empty_deal(Deal)]}));
 send_event_msg(SeatId, Deal, _State) ->
-	desk_api:broadcast(self(), sybp_desk_api:msg(?A_DESK_ZPSYBP_DEAL_GROUP, {SeatId, ?eventing, [Deal]})).
+	desk_api:broadcast(self(), desk_api:msg(?A_DESK_ZPSYBP_DEAL_GROUP, {SeatId, ?eventing, [Deal]})).
 
 %%	发送对战日志信息
 send_vslogs_msg(Desk) ->

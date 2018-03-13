@@ -4,7 +4,7 @@
 %%% Created : 
 %%% -------------------------------------------------------------------
 
--module(sybp_desk_api).
+-module(desk_api).
 
 -behaviour(gamecore_api).
 %% --------------------------------------------------------------------
@@ -123,8 +123,8 @@ msg(?A_DESK_ZPSYBP_RECONNECT_INFO, {Desk, Seat})->
 	Comband = fun(Idx, Od, Bd) -> [Fun(Idx, ?eventing, lists:reverse(Od)), Fun(Idx, ?abandon, [Bd])] end,
 	Bin1 = msg_group(?A_DESK_ZPSYBP_DISCARD, {CurrIdx, Method, [FocusCard]}),
 	Bin2 = msg_group(?A_DESK_ZPSYBP_BANKER_INFO, {BankerIdx, BoutIdx, CardHeap, DeskState}),
-	Bin3 = sybp_ai_mod:make_vote_msg(VoteInfo, Uid),
-	Bin4 = sybp_ai_mod:make_maybe_msg(De, FocusCard, ?msg_group),
+	Bin3 = ai_mod:make_vote_msg(VoteInfo, Uid),
+	Bin4 = ai_mod:make_maybe_msg(De, FocusCard, ?msg_group),
 	Bin5 = Fun(SeatId, ?sortout, HandDeal),
 	Bin6 = msg:encode([{?int8u, length(Seats)}]),
 	Bin7 = iolist_to_binary([Comband(Idx, Od, Bd) || #seat{seat_id=Idx,ext_s=#zpsybp_s{open_deal=Od,ban_deal=Bd}} <- Seats]),
@@ -142,9 +142,9 @@ msg(MsgID,DataList)->
 % [协议块]玩家结算信息块 [4006]
 msg_group(?A_DESK_ZPSYBP_SEAT_SETTLE_INFO, {BankerSeatId, Seat})->
 	#seat{seat_id=SeatId,icon_id=HeadId,uname=Name,ext_s=#zpsybp_s{hu_acc=HuAcc,hu_curr=HuCurr,hand_deal=HandDeal,open_deal=OpenDeal}} = Seat,
-	MyDeal = sybp_ai_api:append_by(fun(_, Deal) -> length(Deal) < ?three end, HandDeal, []) ++ OpenDeal,
+	MyDeal = ai_api:append_by(fun(_, Deal) -> length(Deal) < ?three end, HandDeal, []) ++ OpenDeal,
 	Bin1 = msg:encode([{?int8u, SeatId}, {?bool, BankerSeatId == SeatId}, {?int32u, HeadId}, {?string, Name}, {?int16, HuAcc}, {?int16, HuCurr}, {?int8u, length(MyDeal)}]),	
-	Bin2 = iolist_to_binary([[msg:encode([{?int8u, sybp_ai_api:profit_get(Deal)}]), msg_group(?A_DESK_ZPSYBP_DEAL, Deal)] || Deal <- MyDeal]),
+	Bin2 = iolist_to_binary([[msg:encode([{?int8u, ai_api:profit_get(Deal)}]), msg_group(?A_DESK_ZPSYBP_DEAL, Deal)] || Deal <- MyDeal]),
 	<<Bin1/binary, Bin2/binary>>;
 
 
@@ -248,7 +248,7 @@ doloop(Desk) ->
 			DeskNew = Desk
 	end,
 	#desk{delay=Delays} = DeskNew,
-	NewDelays = sybp_ai_mod:handle_delay_action(Delays),
+	NewDelays = ai_mod:handle_delay_action(Delays),
 	{?noreply, DeskNew#desk{delay=NewDelays}}.
 
 
@@ -303,7 +303,7 @@ reconnect(Desk, Gate) ->
 	#desk{game_id=GameId,seat_list=SeatsOld,event_wait=Des,ext_d=ExtD} = Desk,
 	#zpsybp_d{player_limit=Limit} = ExtD,
 	SeatTmp = vipm_api:vipm_seat_record(Gate, GameId, ?null),
-	SeatsNew = [#seat{seat_id=SeatId}|_Tail] = sybp_ai_mod:seats_renew(SeatsOld, SeatTmp, Limit),
+	SeatsNew = [#seat{seat_id=SeatId}|_Tail] = ai_mod:seats_renew(SeatsOld, SeatTmp, Limit),
 	case lists:keytake(SeatId, #de.seat_idx, Des) of
 		?false				-> 
 			{?noreply, Desk#desk{seat_list=SeatsNew}};
@@ -369,8 +369,8 @@ load_cb(Desk, {Uid, Mpid, IsReconn}) ->
 		?CONST_SCENE_TYPE_GOLD	-> 
 			?skip;
 		?CONST_SCENE_TYPE_KA	->
-			[msg:send(Mpid, sybp_ai_mod:make_seat_msg(Desk, Seat)) || Seat <- Seats],
-			msg:send(Mpid, sybp_ai_mod:make_desk_msg(Desk));
+			[msg:send(Mpid, ai_mod:make_seat_msg(Desk, Seat)) || Seat <- Seats],
+			msg:send(Mpid, ai_mod:make_desk_msg(Desk));
 		?CONST_SCENE_TYPE_GROUP	-> 
 			?skip
 	end,
@@ -385,7 +385,7 @@ handle_event_cb(Desk, {Uid, State, Deal}) ->
 		?true	-> 
 			{?noreply, Desk};
 		?false	->
-			DeskNew = sybp_desk_mod:handle_event(Desk, lists:keyfind(Uid, #seat.uid, Seats), {State, Deal}),
+			DeskNew = desk_mod:handle_event(Desk, lists:keyfind(Uid, #seat.uid, Seats), {State, Deal}),
 			{?noreply, DeskNew#desk{time_last=util_time:seconds()}}
 	end.
 
@@ -398,10 +398,10 @@ player_alter_card_cb(Desk, {Uid, Vectors, Cards}) ->
 			#seat{seat_id=SeatId,mpid=Mpid,ext_s=#zpsybp_s{hand_deal=HandDeal}=ExtS} = Seat,
 			case lists:sort([Deal || Deal <- lists:flatten(HandDeal), Deal =/= []]) == lists:sort(Cards) of
 				?true	->
-					VectorDeals = [lists:reverse(Deal) || Deal <- sybp_ai_api:make_vector(lists:zip(Vectors, Cards), [])],
+					VectorDeals = [lists:reverse(Deal) || Deal <- ai_api:make_vector(lists:zip(Vectors, Cards), [])],
 					{?noreply, Desk#desk{seat_list=[Seat#seat{ext_s=ExtS#zpsybp_s{hand_deal=VectorDeals}}|Tail]}};
 				?false	->
-					begin msg:send(Mpid, sybp_desk_api:msg(?A_DESK_ZPSYBP_DEAL_GROUP, {SeatId, ?sortout, HandDeal})), {?noreply, Desk} end
+					begin msg:send(Mpid, desk_api:msg(?A_DESK_ZPSYBP_DEAL_GROUP, {SeatId, ?sortout, HandDeal})), {?noreply, Desk} end
 			end;
 		?false	->
 			{?noreply, Desk}
@@ -412,7 +412,7 @@ player_alter_card_cb(Desk, {Uid, Vectors, Cards}) ->
 wechat_share_cb(Desk, Mpid) ->
 	#desk{ext_d=#zpsybp_d{player_limit=Limit},ext_dm=#zpsybp_dm{satis_keep_banker=IsKeep,hu_rule=Rule}} = Desk,
 	Names = [Name || #seat{uname=Name} <- Desk#desk.seat_list],
-	msg:send(Mpid, sybp_vipm_api:msg(?A_VIPM_ZPSYBP_WECHAT_SHARE_ACK, {IsKeep, Rule, Limit, Names})),
+	msg:send(Mpid, vipm_api:msg(?A_VIPM_ZPSYBP_WECHAT_SHARE_ACK, {IsKeep, Rule, Limit, Names})),
 	{?noreply, Desk}.
 
 
@@ -421,7 +421,7 @@ test_event(Uid, Bin) ->
 	msg:send_pid(Uid, ?MODULE, test_event_cb, Bin).
 
 test_event_cb(Gate, Bin) ->
-	sybp_desk_gate:way(?R_DESK_ZPSYBP_EVENT, Gate, Bin).
+	desk_gate:way(?R_DESK_ZPSYBP_EVENT, Gate, Bin).
 
 
 %% ====================================================================
@@ -432,7 +432,7 @@ test_event_cb(Gate, Bin) ->
 %%	开始游戏
 gameon(Desk) ->
 	#desk{master_uid=MasterUid,bout_idx=BoutIdx} = Desk,
-	DeskNew = sybp_desk_mod:game_init(Desk),
+	DeskNew = desk_mod:game_init(Desk),
 	vipm_api:notify_reflesh(MasterUid),
 	DeskNew#desk{is_start_game=?true,is_cancle_dismiss=?true,bout_idx=BoutIdx+?one,state=?FLASHCARD,state_tag=?null,state_time=?zero}.
 
@@ -443,10 +443,10 @@ flashcard(Desk) ->
 	#desk{state_time=StateTime} = Desk,
 	case StateTime of
 		?zero		->
-			DeskNew = sybp_desk_mod:flashcard_begin(Desk),
+			DeskNew = desk_mod:flashcard_begin(Desk),
 			DeskNew#desk{state_time=StateTime+1};
 		StateTime		-> 
-			DeskNew = sybp_desk_mod:flashcard_over(Desk),
+			DeskNew = desk_mod:flashcard_over(Desk),
 			DeskNew#desk{state_time=?zero}
 	end.
 
@@ -459,7 +459,7 @@ receiving(Desk) when Desk#desk.event_wait == [], Desk#desk.event_ing == ?null ->
 	{?value, #seat{ext_s=#zpsybp_s{ban_deal=BanDeal}=ExtS}=Seat, Tail} = lists:keytake(CurrIdx, #seat.seat_id, Seats),
 	Desk#desk{state=?DRAWING,state_time=?zero,seat_list=[Seat#seat{ext_s=ExtS#zpsybp_s{ban_deal=[FocusCard|BanDeal]}}|Tail]};
 receiving(Desk) ->
-	sybp_desk_mod:receiving(Desk).
+	desk_mod:receiving(Desk).
 
 
 %%	摸牌
@@ -467,7 +467,7 @@ drawing(Desk) ->
 	#desk{state_time=StateTime} = Desk,
 	case StateTime of
 		?zero		-> 
-			(sybp_desk_mod:drawing(Desk))#desk{state_time=StateTime+1};
+			(desk_mod:drawing(Desk))#desk{state_time=StateTime+1};
 		StateTime	-> 
 			Desk#desk{state=?RECEIVING,state_time=?zero}
 	end.
@@ -475,5 +475,5 @@ drawing(Desk) ->
 
 %%	游戏结束
 gameover(Desk) ->
-	sybp_ai_mod:send_vslogs_msg(Desk),
-	sybp_desk_mod:game_over(Desk).
+	ai_mod:send_vslogs_msg(Desk),
+	desk_mod:game_over(Desk).

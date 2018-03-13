@@ -3,7 +3,7 @@
 %%% File    : vipm_sj_api.erl
 %%% Created : 
 %%% -------------------------------------------------------------------
--module(sj_vipm_api).
+-module(vipm_api).
 
 -behaviour(gamecore_api).
 %% --------------------------------------------------------------------
@@ -146,7 +146,7 @@ cache_set(Gate,Data)->
 doloop(#desk{state=?GAME_DISBAND}=Desk) ->
 	all_calculation(Desk);
 doloop(Desk) ->
-	case sj_desk_api:doloop(Desk) of
+	case desk_api:doloop(Desk) of
 		{?noreply, DeskTmp}			->
 			case Desk#desk.state of
 				?GAME_ON	->
@@ -167,7 +167,7 @@ doloop(Desk) ->
 vipm_join(Desk, Seat)->
 	#desk{master_uid=MasterUid,game_id=GameId,room_id=RoomId,desk_id=DeskId,vipm_key=VipmKey,seat_list=Seats} = Desk,
 	#seat{uid=Uid,uname=Uname,mpid=Mpid,icon_url=IconUrl} = Seat,
-	NewSeats = [NewSeat|_] = sj_ai_mod:seats_renew(Seats, Seat#seat{ext_s=#sj_s{level=Desk#desk.ext_dm#sj_dm.default_level}}),
+	NewSeats = [NewSeat|_] = ai_mod:seats_renew(Seats, Seat#seat{ext_s=#sj_s{level=Desk#desk.ext_dm#sj_dm.default_level}}),
 	case lists:keymember(Uid, #seat.uid, Seats) of
 		?true	->
 			msg:send(Mpid, desk_api:msg(?A_DESK_JOIN_OK, {GameId, DeskId, VipmKey, ?true})),
@@ -177,8 +177,8 @@ vipm_join(Desk, Seat)->
 			case length(Seats) < ?CONST_SJ_GAME_STATE_NUM_PLAYER of
 				?true	->
 					msg:send(Mpid, desk_api:msg(?A_DESK_JOIN_OK, {GameId, DeskId, VipmKey, ?false})),
-					desk_api:broadcast(Desk, sj_ai_mod:make_seat_msg(Desk, NewSeat)),
-					desk_api:broadcast(Desk, sj_ai_mod:make_desk_msg(Desk)),					
+					desk_api:broadcast(Desk, ai_mod:make_seat_msg(Desk, NewSeat)),
+					desk_api:broadcast(Desk, ai_mod:make_desk_msg(Desk)),					
 					desk_api:join_user_ok(Uid, self(), RoomId, DeskId, GameId),
 					UidInfo = #so{uid=Uid,uname=Uname,icon_url=IconUrl},
 					dcfg:rpc_cast_hub(vipm_ctrl_api, vipm_add, [VipmKey, UidInfo]),
@@ -198,18 +198,18 @@ game_on(Desk) ->
 
 %%	游戏结束
 game_over(Desk) ->
-	begin sj_ai_mod:save_vslogs_db(Desk), Desk end.
+	begin ai_mod:save_vslogs_db(Desk), Desk end.
 
 
 %%	总结算 
 all_calculation(Desk) ->
 	#desk{master_uid=MasterUid,vipm_key=RoomKey,seat_list=Seats,bout_idx=BoutIdx,ext_dm=SjDm} = Desk,
 	#sj_dm{game_mode=GameMode,multiple=Multiple} = SjDm,
-	SeatsNew = sj_ai_mod:liq_score(GameMode, Multiple, Seats),
-	SoList = sj_ai_mod:make_so_data(SeatsNew),
+	SeatsNew = ai_mod:liq_score(GameMode, Multiple, Seats),
+	SoList = ai_mod:make_so_data(SeatsNew),
 	dcfg:rpc_cast_hub(vipm_ctrl_api, vipm_update, [RoomKey, ?two, BoutIdx, SoList]), 
 	vipm_api:notify_reflesh(MasterUid),
-	desk_api:broadcast(Desk, sj_vipm_api:msg(?A_VIPM_SJ_LIQUIDATION, Desk#desk{seat_list=SeatsNew})),
+	desk_api:broadcast(Desk, vipm_api:msg(?A_VIPM_SJ_LIQUIDATION, Desk#desk{seat_list=SeatsNew})),
 	{?stop, ?normal, Desk#desk{seat_list=SeatsNew,state=?GAME_PREP}}.
 
 
