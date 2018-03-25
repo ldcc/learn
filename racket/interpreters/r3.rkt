@@ -4,29 +4,32 @@
 
 (struct closure (fun env))
 
-(struct scope (tab sup))
-
 ;;; env
 
 (define denv
-  (map cons
-       (list '+ '- '* '/)
-       (list  +  -  *  /)))
+  (make-hash
+   (map cons
+        '(+   -  *  /)
+        `(,+ ,- ,* ,/))))
 
 (define lookup
   (λ (a env)
-    (let ([v (assq a env)])
+    (let ([v? (hash-ref env a #f)])
       (cond
-        [(not v) (error (format "unbound variable ~a, env: ~a" a env))]
-        [else (cdr v)]))))
+        [(not v?) (error (format "unbound variable"))]
+        [else v?]))))
 
 (define ext-env
   (λ (a v env)
-    (cons (cons a v) env)))
+    (hash-set! env a v)
+    env))
 
 (define ext-env*
   (λ (a* v* env*)
-    `(,@(map cons a* v*) ,@env*)))
+    (for ([a a*]
+          [v v*])
+      (hash-set! env* a v))
+    env*))
 
 ;;; main code
 
@@ -37,14 +40,15 @@
       [(? symbol?)
        (lookup exp env)]
       [`(begin ,e* ... ,en)
-       (for ([e e*])
-         (interp e env))
+       (for ([e e*]) (interp e env))
        (interp en env)]
+      [`(define ,a ,e)
+       (ext-env a (interp e env) env)]
       [`(λ ,a ,e ...)
        (closure `(λ ,a (begin ,@e)) env)]
-      [`(,f ,a ...)
+      [`(,f ,a* ...)
        (let ([funv (interp f env)]
-             [argv (map (λ (v) (interp v env)) a)])
+             [argv (map (λ (a) (interp a env)) a*)])
          (match funv
            [(? procedure?)
             (apply funv argv)]
@@ -67,3 +71,20 @@
         [else
          (printf "REPL ⇒ ~a~n" (r3 exp))
          (repl)]))))
+
+(r3
+ '(begin
+    (define c 20)
+    (define a 10)
+    (+ a c)))
+
+
+
+
+
+
+
+
+
+
+
