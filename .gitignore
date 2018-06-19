@@ -1,5 +1,18 @@
+### Gradle template
+.gradle
+/build
+/out
+*/build/
+*/out/
+
+### Emacs template
 *.bak
 #*#
 *~
-out/
+
+### Python template
+*.pyc
+
+### Workspace
 .idea/
+*.iml

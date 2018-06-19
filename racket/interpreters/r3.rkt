@@ -1,11 +1,9 @@
 #lang racket
 
 ;;; structure
-
 (struct closure (fun env))
 
 ;;; env
-
 (define denv
   (make-hash
    (map cons
@@ -32,7 +30,6 @@
     env*))
 
 ;;; main code
-
 (define interp
   (λ (exp env)
     (match exp
@@ -48,16 +45,15 @@
        (closure `(λ ,a (begin ,@e)) env)]
       [`(,f ,a* ...)
        (let ([funv (interp f env)]
-             [argv (map (λ (a) (interp a env)) a*)])
+             [arg* (map (λ (a) (interp a env)) a*)])
          (match funv
            [(? procedure?)
-            (apply funv argv)]
+            (apply funv arg*)]
            [(closure `(λ ,a* ,e*) env-save)
-            (interp e* (ext-env* a* argv env-save))]
+            (interp e* (ext-env* a* arg* env-save))]
            [_ (error "badmatch" funv)]))])))
 
 ;; user interface
-
 (define r3
   (λ (exp)
     (interp exp denv)))
