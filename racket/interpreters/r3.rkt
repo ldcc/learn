@@ -59,7 +59,7 @@
 ;; user interface
 (define r3
   (λ (exp)
-    (interp (cons 'begin exp) denv)))
+    (interp `(begin ,@exp) denv)))
 
 (define repl 
   (λ ()
