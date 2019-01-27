@@ -1,7 +1,4 @@
-package com.ldcstorm.training.java8news;
-
-import com.ldcstorm.training.Album;
-import com.ldcstorm.training.Artist;
+package java8news;
 
 import java.util.*;
 import java.util.stream.Collectors;

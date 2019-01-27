@@ -14,8 +14,8 @@
   (λ (a env)
     (let ([v? (hash-ref env a #f)])
       (cond
-        [(not v?) (error (format "unbound variable"))]
-        [else v?]))))
+        [v? v?]
+        [else (error 'unbound-variable)]))))
 
 (define ext-env
   (λ (a v env)
@@ -23,11 +23,11 @@
     env))
 
 (define ext-env*
-  (λ (a* v* env*)
+  (λ (a* v* env)
     (for ([a a*]
           [v v*])
-      (hash-set! env* a v))
-    env*))
+      (hash-set! env a v))
+    env))
 
 ;;; main code
 (define interp
@@ -44,19 +44,22 @@
       [`(λ ,a ,e ...)
        (closure `(λ ,a (begin ,@e)) env)]
       [`(,f ,a* ...)
-       (let ([funv (interp f env)]
+       (let ([func (interp f env)]
              [arg* (map (λ (a) (interp a env)) a*)])
-         (match funv
-           [(? procedure?)
-            (apply funv arg*)]
-           [(closure `(λ ,a* ,e*) env-save)
-            (interp e* (ext-env* a* arg* env-save))]
-           [_ (error "badmatch" funv)]))])))
+         (cond
+           [(= (length a*) (length arg*))
+            (match func
+              [(? procedure?)
+               (apply func arg*)]
+              [(closure `(λ ,a* ,e*) env-save)
+               (interp e* (ext-env* a* arg* env-save))]
+              [_ (error 'expression-badmatch func)])]
+           [else (error 'arity-mismatch)]))])))
 
 ;; user interface
 (define r3
   (λ (exp)
-    (interp exp denv)))
+    (interp (cons 'begin exp) denv)))
 
 (define repl 
   (λ ()
@@ -69,18 +72,6 @@
          (repl)]))))
 
 (r3
- '(begin
-    (define c 20)
-    (define a 10)
-    (+ a c)))
-
-
-
-
-
-
-
-
-
-
-
+ '((define c 20)
+   (define a 10)
+   ((λ (x y o) (o x y)) a c +)))

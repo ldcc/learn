@@ -1,14 +1,15 @@
-package org.ldccc.algos.interactive.interpreter;
+package algos.interactive.interpreter;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class InterpreterTest {
 
-  @Test
+  @org.junit.jupiter.api.Test
   public static void basicTests() {
-    Interpreter interpreter = new Interpreter();
+    org.ldccc.algos.interactive.interpreter.Interpreter interpreter = new org.ldccc.algos.interactive.interpreter.Interpreter();
 
     // Basic arithmetic
     assertEquals(11, interpreter.input("4 + 2 * 3 + 1"), 0.0);
@@ -46,7 +47,7 @@ public class InterpreterTest {
 
   @Test
   public static void conflictsTests() {
-    Interpreter interpreter = new Interpreter();
+    org.ldccc.algos.interactive.interpreter.Interpreter interpreter = new org.ldccc.algos.interactive.interpreter.Interpreter();
 
     assertEquals(0, interpreter.input("x = 0"), 0.0);
     interpreter.input("fn f => 1");
@@ -59,7 +60,7 @@ public class InterpreterTest {
 
   @Test
   public static void functionsTests() {
-    Interpreter interpreter = new Interpreter();
+    org.ldccc.algos.interactive.interpreter.Interpreter interpreter = new org.ldccc.algos.interactive.interpreter.Interpreter();
 
     assertEquals(23, interpreter.input("x = 23"), 0.0);
     assertEquals(25, interpreter.input("y = 25"), 0.0);
@@ -74,7 +75,7 @@ public class InterpreterTest {
 
   @Test
   public static void variablesTests() {
-    Interpreter interpreter = new Interpreter();
+    org.ldccc.algos.interactive.interpreter.Interpreter interpreter = new org.ldccc.algos.interactive.interpreter.Interpreter();
 
     assertEquals(7, interpreter.input("x = 7"), 0.0);
     assertEquals(7, interpreter.input("x"), 0.0);
@@ -92,10 +93,10 @@ public class InterpreterTest {
 
   @Test
   public static void interpreterTest() {
-    Interpreter interpreter = new Interpreter();
+    org.ldccc.algos.interactive.interpreter.Interpreter interpreter = new org.ldccc.algos.interactive.interpreter.Interpreter();
 
-    assertEquals("input: ''", null, interpreter.input(""));
-    assertEquals("input: ' '", null, interpreter.input(" "));
+    assertEquals(null, interpreter.input(""));
+    assertEquals(null, interpreter.input(" "));
     assertEquals(9, interpreter.input("9"), 0.0);
     assertFail("input: '1 2'", () -> interpreter.input("1 2"));
     assertFail("input: '1two'", () -> interpreter.input("1two"));

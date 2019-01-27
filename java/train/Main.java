@@ -1,7 +1,5 @@
-package com.ldcstorm.training;
 
-import com.ldcstorm.training.java8news.CollectorTest;
-import com.ldcstorm.training.java8news.MultipleInheritance;
+import java8news.CollectorTest;
 
 public class Main {
 
