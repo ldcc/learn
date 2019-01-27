@@ -14,7 +14,5 @@
 */build/
 */out/
 *.pyc
-python/*test_helper.py
-python/*/venv/
-python/*/logs/
+python/pyedu
 node_modules/
