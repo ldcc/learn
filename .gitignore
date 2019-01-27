@@ -1,18 +1,20 @@
-### Gradle template
+### Gradle 
+
+### Emacs
+*.bak
+#*#
+*~
+
+### Envs
+.idea/
+*.iml
 .gradle
 /build
 /out
 */build/
 */out/
-
-### Emacs template
-*.bak
-#*#
-*~
-
-### Python template
 *.pyc
-
-### Workspace
-.idea/
-*.iml
+python/*test_helper.py
+python/*/venv/
+python/*/logs/
+node_modules/
