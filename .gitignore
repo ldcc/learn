@@ -1,18 +1,4 @@
-### Gradle 
-
-### Emacs
-*.bak
-#*#
-*~
-
-### Envs
+asterisk/
 .idea/
-*.iml
-.gradle
-/build
-/out
-*/build/
-*/out/
-*.pyc
-python/pyedu
-node_modules/
+out
+*~
