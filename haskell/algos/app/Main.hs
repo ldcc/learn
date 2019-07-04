@@ -1,6 +1,6 @@
 module Main where
 
-import ReverseWords
+import PickPeak
 
 main :: IO ()
-main = putStrLn . show $ reverseWords "qwe asd zxc"
+main = putStrLn . show $ pickPeaks [2,1,3,3,3,1,1,2,1]

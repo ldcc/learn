@@ -1,4 +1,4 @@
-module BreakingChocolate where
+module BreakChocolate where
 
 breakChocolate :: Int -> Int -> Int
 -- breakChocolate n m = 
