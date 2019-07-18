@@ -1,6 +1,18 @@
 module Main where
 
-import GapInPrimes
+import RecoverSecretFromTriplets
+
+-- whatisup
+-- mathisfun
+triplets = ["tup"
+                      ,"whi"
+                      ,"tsu"
+                      ,"ats"
+                      ,"hap"
+                      ,"tis"
+                      ,"whs"
+                      ]
+
 
 main :: IO ()
-main = putStrLn . show $ isPrime 337
+main = putStrLn . show $ recoverSecret triplets
