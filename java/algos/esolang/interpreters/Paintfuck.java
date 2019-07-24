@@ -1,4 +1,4 @@
-package org.ldccc.algos.esolang.interpreters;
+package esolang.interpreters;
 
 import java.util.ArrayList;
 import java.util.Arrays;

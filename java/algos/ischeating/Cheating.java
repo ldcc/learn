@@ -1,4 +1,4 @@
-package org.ldccc.algos.ischeating;
+package ischeating;
 
 import java.util.ArrayList;
 import java.util.List;

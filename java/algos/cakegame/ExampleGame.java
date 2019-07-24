@@ -1,4 +1,4 @@
-package org.ldccc.algos.cakegame;
+package cakegame;
 
 import java.util.ArrayList;
 import java.util.Random;

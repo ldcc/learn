@@ -1,4 +1,4 @@
-package org.ldccc.algos.columntitle;
+package columntitle;
 
 public class ColumnTitle {
 

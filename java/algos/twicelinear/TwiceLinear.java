@@ -1,4 +1,4 @@
-package org.ldccc.algos.twicelinear;
+package twicelinear;
 
 import java.util.Collections;
 import java.util.TreeSet;

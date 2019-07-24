@@ -1,4 +1,4 @@
-package org.ldccc.algos.bindservice;
+package bindservice;
 
 public class BindService {
 	

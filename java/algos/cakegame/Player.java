@@ -1,4 +1,4 @@
-package org.ldccc.algos.cakegame;
+package cakegame;
 
 public class Player {
     public Player(int cakes) {

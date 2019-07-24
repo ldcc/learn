@@ -1,4 +1,4 @@
-package org.ldccc.algos.indiff;
+package indiff;
 
 public class Indiff {
 

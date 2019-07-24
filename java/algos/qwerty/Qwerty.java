@@ -1,4 +1,4 @@
-package org.ldccc.algos.qwerty;
+package qwerty;
 
 public class Qwerty {
     /* You have to write two methods to encrypt and decrypt strings. Both methods have two parameters:

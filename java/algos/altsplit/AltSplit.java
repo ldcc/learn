@@ -1,4 +1,4 @@
-package org.ldccc.algos.altsplit;
+package altsplit;
 
 public class AltSplit {
     public static String encrypt(final String text, final int n) {

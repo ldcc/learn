@@ -1,4 +1,4 @@
-package org.ldccc.algos.resistorcolor;
+package resistorcolor;
 
 import java.util.stream.Stream;
 

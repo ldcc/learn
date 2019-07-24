@@ -1,4 +1,13 @@
-asterisk/
 .idea/
-out
-*~
+out/
+asterisk/
+
+### Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+### Hakell
+.stack-work/
+*.cabal
+*\~

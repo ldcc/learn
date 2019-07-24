@@ -1,4 +1,4 @@
-package org.ldccc.algos.thsync;
+package thsync;
 
 public class MyOutput implements Runnable {
 

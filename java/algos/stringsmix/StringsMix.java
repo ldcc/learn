@@ -1,4 +1,4 @@
-package org.ldccc.algos.stringsmix;
+package stringsmix;
 
 
 import java.util.HashMap;

@@ -1,4 +1,4 @@
-package org.ldccc.algos.escaping;
+package escaping;
 
 public class MatrixTest {
     public void test() {

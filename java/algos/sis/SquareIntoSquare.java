@@ -1,4 +1,4 @@
-package org.ldccc.algos.sis;
+package sis;
 
 import java.util.List;
 import java.util.stream.Collectors;

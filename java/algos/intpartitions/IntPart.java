@@ -1,4 +1,4 @@
-package org.ldccc.algos.intpartitions;
+package intpartitions;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package org.ldccc.algos.multiples;
+package multiples;
 
 import java.util.ArrayList;
 import java.util.List;

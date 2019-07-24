@@ -1,4 +1,4 @@
-package org.ldccc.algos.compiler.tiny.three.pass;
+package compiler.tiny.three.pass;
 
 public interface Ast {
 	String op();

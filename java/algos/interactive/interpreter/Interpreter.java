@@ -1,10 +1,10 @@
-package org.ldccc.algos.interactive.interpreter;
+package interactive.interpreter;
 
-    import javafx.util.Pair;
+import javafx.util.Pair;
 
-    import java.util.*;
-    import java.util.regex.Matcher;
-    import java.util.regex.Pattern;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Interpreter {
 
@@ -90,26 +90,18 @@ public class Interpreter {
       } else if (token.equals(")")) {
         stack1.push(token);
       } else if (token.equals("(")) {
-        while (!stack1.peek().equals(")")) {
-          stack2.push(stack1.pop());
-        }
+        while (!stack1.peek().equals(")")) stack2.push(stack1.pop());
         stack1.pop();
       } else if (isMD(token)) {
         stack1.push(token);
       } else if (isAS(token)) {
-        while (!stack1.isEmpty() && isMD(stack1.peek())) {
-          stack2.push(stack1.poll());
-        }
+        while (!stack1.isEmpty() && isMD(stack1.peek())) stack2.push(stack1.poll());
         stack1.push(token);
       } else if (isAssign(token)) {
-        while (!stack1.isEmpty() && !stack1.peek().equals(")")) {
-          stack2.push(stack1.pop());
-        }
+        while (!stack1.isEmpty() && !stack1.peek().equals(")")) stack2.push(stack1.pop());
         stack1.push(token);
       } else if (isFunction(token)) {
-        while (!stack1.isEmpty()) {
-          stack2.push(stack1.pop());
-        }
+        while (!stack1.isEmpty()) stack2.push(stack1.pop());
         stack2.push(token);
       }
     }

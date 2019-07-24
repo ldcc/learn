@@ -1,4 +1,4 @@
-package org.ldccc.algos.bitcounting;
+package bitcounting;
 
 public class BitCounting {
 

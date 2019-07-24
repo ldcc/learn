@@ -1,4 +1,4 @@
-package org.ldccc.algos.fibonacci;
+package fibonacci;
 
 import java.math.BigInteger;
 import java.util.HashMap;

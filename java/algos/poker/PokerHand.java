@@ -1,4 +1,4 @@
-package org.ldccc.algos.poker;
+package poker;
 
 public class PokerHand {
 

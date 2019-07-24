@@ -1,4 +1,4 @@
-package org.ldccc.algos.factorials;
+package factorials;
 
 import java.math.BigInteger;
 

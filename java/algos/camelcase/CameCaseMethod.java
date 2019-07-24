@@ -1,4 +1,4 @@
-package org.ldccc.algos.camelcase;
+package camelcase;
 
 import java.util.stream.Stream;
 

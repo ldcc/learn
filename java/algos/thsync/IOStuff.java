@@ -1,4 +1,4 @@
-package org.ldccc.algos.thsync;
+package thsync;
 
 import java.io.*;
 

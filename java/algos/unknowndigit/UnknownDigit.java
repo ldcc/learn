@@ -1,4 +1,4 @@
-package org.ldccc.algos.unknowndigit;
+package unknowndigit;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package org.ldccc.algos.deltabits;
+package deltabits;
 
 
 public class DeltaBits {

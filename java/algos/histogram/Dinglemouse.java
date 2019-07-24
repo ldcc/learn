@@ -1,4 +1,4 @@
-package org.ldccc.algos.histogram;
+package histogram;
 
 import java.util.ArrayList;
 import java.util.Arrays;

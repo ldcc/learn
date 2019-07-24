@@ -1,4 +1,4 @@
-package org.ldccc.algos.smallernumber;
+package smallernumber;
 
 import java.util.*;
 

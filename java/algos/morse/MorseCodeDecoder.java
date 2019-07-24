@@ -1,4 +1,4 @@
-package org.ldccc.algos.morse;
+package morse;
 
 import java.util.ArrayList;
 import java.util.Arrays;

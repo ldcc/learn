@@ -1,4 +1,4 @@
-package org.ldccc.algos.compiler.tiny.three.pass;
+package compiler.tiny.three.pass;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -54,7 +54,7 @@ public class Compiler {
 		return 0;
 	}
 
-	private Ast judgeOp(String token) {
+	private Ast determineOp(String token) {
 		if (isNumber(token)) {
 			return new UnOp("imm", Integer.parseInt(token));
 		} else {
@@ -64,7 +64,7 @@ public class Compiler {
 
 	private Ast pass1Iter(Deque<String> tokens) {
 		String token = tokens.pop();
-		return isAS(token) || isMD(token) ? new BinOp(token, pass1Iter(tokens), pass1Iter(tokens)) : judgeOp(token);
+		return isAS(token) || isMD(token) ? new BinOp(token, pass1Iter(tokens), pass1Iter(tokens)) : determineOp(token);
 	}
 
 //	private Ast pass1Iter(Deque<String> tokens) {
@@ -75,7 +75,7 @@ public class Compiler {
 //			sonTokens.add("$");
 //			last = pass1Iter(sonTokens);
 //		} else {
-//			last = judgeOp(tokens, token);
+//			last = determineOp(tokens, token);
 //		}
 //
 ////		such op get only $ or symbol
@@ -94,19 +94,12 @@ public class Compiler {
 			} else if (token.equals(")")) {
 				stack1.push(token);
 			} else if (token.equals("(")) {
-				String tem = stack1.pop();
-				while (!tem.equals(")")) {
-					stack2.push(tem);
-					tem = stack1.pop();
-				}
+				while (!stack1.peek().equals(")")) stack2.push(stack1.pop());
+				stack1.pop();
 			} else if (isMD(token)) {
 				stack1.push(token);
 			} else if (isAS(token)) {
-				String tem = stack1.peek();
-				while (tem != null && isMD(tem)) {
-					stack2.push(stack1.pop());
-					tem = stack1.peek();
-				}
+				while (!stack1.isEmpty() && isMD(stack1.peek())) stack2.push(stack1.poll());
 				stack1.push(token);
 			}
 		}
@@ -123,7 +116,8 @@ public class Compiler {
 	public Ast pass1(String prog) {
 		Deque<String> tokens = tokenize(prog);
 		List<String> tem = new ArrayList<>();
-		String token;	tokens.pop();
+		String token;
+		tokens.pop();
 		while (!(token = tokens.pop()).equals("]")) tem.add(token);
 		args = tem.toArray(new String[0]);
 		Deque<String> stack = parse(tokens);

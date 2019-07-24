@@ -1,4 +1,4 @@
-package org.ldccc.algos.abbreviator;
+package abbreviator;
 
 import java.util.ArrayList;
 import java.util.List;

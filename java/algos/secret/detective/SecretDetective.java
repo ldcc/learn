@@ -1,4 +1,4 @@
-package org.ldccc.algos.secret.detective;
+package secret.detective;
 
 import java.util.*;
 

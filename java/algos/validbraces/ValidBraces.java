@@ -1,4 +1,4 @@
-package org.ldccc.algos.validbraces;
+package validbraces;
 
 
 import java.util.*;
