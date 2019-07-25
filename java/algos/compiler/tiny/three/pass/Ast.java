@@ -6,13 +6,13 @@ public interface Ast {
 
 class BinOp implements Ast {
 	private String op;
-	private Ast a;
-	private Ast b;
+	private Ast l;
+	private Ast r;
 
-	public BinOp(String op, Ast a, Ast b) {
+	public BinOp(String op, Ast l, Ast r) {
 		this.op = op;
-		this.a = a;
-		this.b = b;
+		this.l = l;
+		this.r = r;
 	}
 
 	@Override
@@ -20,22 +20,22 @@ class BinOp implements Ast {
 		return op;
 	}
 
-	public Ast a() {
-		return a;
+	public Ast l() {
+		return l;
 	}
 
-	public Ast b() {
-		return b;
+	public Ast r() {
+		return r;
 	}
 
 	@Override
 	public String toString() {
-		return "(" + op + " " + a + " " + b + ")";
+		return "(" + op + " " + l + " " + r + ")";
 	}
 
 	@Override
 	public int hashCode() {
-		return (op.hashCode() + a.hashCode() + b.hashCode()) * 31;
+		return (op.hashCode() + l.hashCode() + r.hashCode()) * 31;
 	}
 
 	@Override
@@ -46,11 +46,11 @@ class BinOp implements Ast {
 
 class UnOp implements Ast {
 	private String op;
-	private int i;
+	private int n;
 
-	public UnOp(String op, int i) {
+	public UnOp(String op, int n) {
 		this.op = op;
-		this.i = i;
+		this.n = n;
 	}
 
 	@Override
@@ -59,16 +59,16 @@ class UnOp implements Ast {
 	}
 
 	public int n() {
-		return i;
+		return n;
 	}
 
 	@Override
 	public String toString() {
-		return String.valueOf(i);
+		return String.valueOf(n);
 	}
 
 	@Override
 	public int hashCode() {
-		return (op.hashCode() + i) * 31;
+		return (op.hashCode() + n) * 31;
 	}
 }

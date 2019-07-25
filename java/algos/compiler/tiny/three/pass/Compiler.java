@@ -142,7 +142,7 @@ public class Compiler {
 	 * Returns an AST with constant expressions reduced
 	 */
 
-	private Ast calculator(String op, int a, int b) {
+	private Ast calculate(String op, int a, int b) {
 		switch (op) {
 			case "+":
 				return new UnOp("imm", a + b);
@@ -159,10 +159,10 @@ public class Compiler {
 		if (ast instanceof UnOp) {
 			return ast;
 		} else {
-			Ast a = pass2(((BinOp) ast).a());
-			Ast b = pass2(((BinOp) ast).b());
+			Ast a = pass2(((BinOp) ast).l());
+			Ast b = pass2(((BinOp) ast).r());
 			if (a.op().equals("imm") && b.op().equals("imm")) {
-				return calculator(ast.op(), ((UnOp) a).n(), ((UnOp) b).n());
+				return calculate(ast.op(), ((UnOp) a).n(), ((UnOp) b).n());
 			} else {
 				return new BinOp(ast.op(), a, b);
 			}
@@ -195,11 +195,11 @@ public class Compiler {
 			return Collections.singletonList(unSelector((UnOp) ast));
 		} else {
 			BinOp bin = (BinOp) ast;
-			List<String> v1 = pass3(bin.a());
-			List<String> v2 = pass3(bin.b());
+			List<String> v1 = pass3(bin.l());
+			List<String> v2 = pass3(bin.r());
 
 			List<String> tem = new ArrayList<>();
-			if (bin.b() instanceof UnOp) {
+			if (bin.r() instanceof UnOp) {
 				tem.addAll(v1);
 				tem.add("SW");
 				tem.addAll(v2);
