@@ -142,16 +142,16 @@ public class Compiler {
 	 * Returns an AST with constant expressions reduced
 	 */
 
-	private Ast calculate(String op, int a, int b) {
+	private Ast calculate(String op, int l, int r) {
 		switch (op) {
 			case "+":
-				return new UnOp("imm", a + b);
+				return new UnOp("imm", l + r);
 			case "-":
-				return new UnOp("imm", a - b);
+				return new UnOp("imm", l - r);
 			case "*":
-				return new UnOp("imm", a * b);
+				return new UnOp("imm", l * r);
 			default:
-				return new UnOp("imm", a / b);
+				return new UnOp("imm", l / r);
 		}
 	}
 
@@ -159,12 +159,12 @@ public class Compiler {
 		if (ast instanceof UnOp) {
 			return ast;
 		} else {
-			Ast a = pass2(((BinOp) ast).l());
+			Ast l = pass2(((BinOp) ast).l());
 			Ast r = pass2(((BinOp) ast).r());
-			if (a.op().equals("imm") && r.op().equals("imm")) {
-				return calculate(ast.op(), ((UnOp) a).n(), ((UnOp) r).n());
+			if (l.op().equals("imm") && r.op().equals("imm")) {
+				return calculate(ast.op(), ((UnOp) l).n(), ((UnOp) r).n());
 			} else {
-				return new BinOp(ast.op(), a, r);
+				return new BinOp(ast.op(), l, r);
 			}
 		}
 	}
