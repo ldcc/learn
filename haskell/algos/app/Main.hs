@@ -1,6 +1,6 @@
 module Main where
 
-import Calculator
+import TinyThreePassCompiler
 
 main :: IO ()
-main = putStrLn . show $ evaluate "4 + 3 * 4 / 3 - 6 / 3 * 3 + 8"
+main = putStrLn . show $ simulate (compile "[ x ] x + 2 * 5") [3]
