@@ -160,11 +160,11 @@ public class Compiler {
 			return ast;
 		} else {
 			Ast a = pass2(((BinOp) ast).l());
-			Ast b = pass2(((BinOp) ast).r());
-			if (a.op().equals("imm") && b.op().equals("imm")) {
-				return calculate(ast.op(), ((UnOp) a).n(), ((UnOp) b).n());
+			Ast r = pass2(((BinOp) ast).r());
+			if (a.op().equals("imm") && r.op().equals("imm")) {
+				return calculate(ast.op(), ((UnOp) a).n(), ((UnOp) r).n());
 			} else {
-				return new BinOp(ast.op(), a, b);
+				return new BinOp(ast.op(), a, r);
 			}
 		}
 	}
