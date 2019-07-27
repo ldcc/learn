@@ -228,19 +228,15 @@ public class Interpreter {
 
   public Double input(String input) {
     if (input.trim().isEmpty()) return null;
-    System.out.println(input);
-    Deque<String> tokens = tokenize(input);
-
-    Deque<String> polish = parsing(tokens);
-    System.out.println(polish);
-
+    Deque<String> polish = parsing(tokenize(input));
     Ast ast = polish.peek().equals("fn") ? closure(polish) : getAst(polish);
-    System.out.println(ast);
 
     if (!polish.isEmpty()) {
       throw new IllegalArgumentException("Mismatch expression");
     } else {
-      return calcIter(ast);
+      Double result = calcIter(ast);
+      System.out.println(input + " >>= " + ast + " >>= " + result);
+      return result;
     }
   }
 

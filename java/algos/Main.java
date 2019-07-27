@@ -6,7 +6,6 @@ import bitcounting.BitCounting;
 import breadcrumb.Generating;
 import camelcase.CameCaseMethod;
 import columntitle.ColumnTitle;
-import compiler.tiny.three.pass.CompilerTest;
 import conwaylife.ConwayLife;
 import deltabits.DeltaBits;
 import dictionary.Dictionary;
@@ -72,8 +71,8 @@ public class Main {
 //        testSmallfuck();
 //        testPaintfuck();
 //        testBoolfuck();
-        CompilerTest.testSimpleProg();
-//        testInterpreter();
+//        CompilerTest.testSimpleProg();
+        testInterpreter();
     }
 
     private static void testInterpreter() {
