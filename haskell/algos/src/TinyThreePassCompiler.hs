@@ -20,8 +20,12 @@ pass1 prog = fst . generates $ parsing [] [] $ reverse tokens
   where
     (tokens, params) = fmap words $ split prog
     split ('[':ts) = split ts
-    split (']':ts) = (words ts, [])
+    split (']':ts) = (words $ seperates ts, [])
     split (t:ts) = let (nts, nt) = split ts in (nts, t:nt)
+    seperates [] = []
+    seperates (t:ts)
+      | elem t "+-*/" = [' ', t, ' '] ++ seperates ts
+      | otherwise = t : seperates ts
     generates (t:ts0)
       | issy t = let
           (car, ts1) = generates ts0
