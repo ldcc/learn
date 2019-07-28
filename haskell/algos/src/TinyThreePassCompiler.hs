@@ -1,7 +1,8 @@
 module TinyThreePassCompiler where
 
+import Text.Read (readMaybe)
 import Data.List (elemIndex)
-import Data.Maybe (fromJust)
+import Data.Maybe (isJust, fromJust)
 
 data AST = Imm Int
          | Arg Int
@@ -11,30 +12,49 @@ data AST = Imm Int
          | Div AST AST
          deriving (Eq, Show)
 
-data Token = TChar Char
-           | TInt Int
-           | TStr String
-           deriving (Eq, Show)
-
 compile :: String -> [String]
 compile = pass3 . pass2 . pass1
 
-
 pass1 :: String -> AST
-pass1 prog = fst . generates $ parse $ reverse tokens
+pass1 prog = fst . generates $ parsing [] [] $ reverse tokens
   where
-    (params, tokens) = split $ tokenize prog
-    generates :: [Token] -> (AST, [Token])
-    generates (TInt v:ts) = (Imm v, ts)
-    generates (TStr s:ts) = (Arg $ fromJust $ flip elemIndex params $ TStr s, ts)
-    generates (TChar c:ts0) = case c of
-      '+' -> (Add car cdr, ts2)
-      '-' -> (Sub car cdr, ts2)
-      '*' -> (Mul car cdr, ts2)
-      '/' -> (Div car cdr, ts2)
-      where
-        (car, ts1) = generates ts0
-        (cdr, ts2) = generates ts1
+    (tokens, params) = fmap words $ split prog
+    split ('[':ts) = split ts
+    split (']':ts) = (words ts, [])
+    split (t:ts) = let (nts, nt) = split ts in (nts, t:nt)
+    generates (t:ts0)
+      | issy t = let
+          (car, ts1) = generates ts0
+          (cdr, ts2) = generates ts1
+        in case t of
+          "+" -> (Add car cdr, ts2)
+          "-" -> (Sub car cdr, ts2)
+          "*" -> (Mul car cdr, ts2)
+          "/" -> (Div car cdr, ts2)
+      | isn t = (Imm $ read t, ts0)
+      | otherwise = (Arg $ fromJust $ flip elemIndex params t, ts0)
+    parsing stack1 stack2 [] = merging stack1 stack2 [] [tau]
+    parsing stack1 stack2 (t:ts)
+      | isr t = parsing (t:stack1) stack2 ts
+      | isl t = merging stack1 stack2 (t:ts) [not . isr]
+      | any ($ t) [ism, isd] = parsing (t:stack1) stack2 ts
+      | any ($ t) [isp, iss] = merging stack1 stack2 (t:ts) [ism, isd]
+      | otherwise = parsing stack1 (t:stack2) ts
+    merging [] stack2 [] _ = stack2
+    merging [] stack2 (t:ts) _ = parsing [t] stack2 ts
+    merging (s:ss) stack2 tokens ps
+      | any ($ s) ps = merging ss (s : stack2) tokens ps
+      | isl $ head tokens = parsing ss stack2 (tail tokens)
+      | otherwise = parsing (head tokens : s : ss) stack2 (tail tokens)
+    tau _ = True
+    isp = (==) "+"
+    iss = (==) "-"
+    ism = (==) "*"
+    isd = (==) "/"
+    isl = (==) "("
+    isr = (==) ")"
+    isn = (isJust :: Maybe Int -> Bool) . readMaybe
+    issy = flip any [isp, iss, ism, isd] . flip ($)
 
 pass2 :: AST -> AST
 pass2 (Imm v) = Imm v
@@ -52,7 +72,7 @@ pass2 ast = case getLR ast of
     getLR (Mul l r) = Mul (pass2 l) (pass2 r)
     getLR (Div l r) = Div (pass2 l) (pass2 r)
 
---pass3 :: AST -> [String]
+pass3 :: AST -> [String]
 pass3 (Imm v) = ["IM " ++ show v]
 pass3 (Arg i) = ["AR " ++ show i]
 pass3 ast = let (l, r) = getLR ast in l ++ ["PU"] ++ r ++ ["SW", "PO"] ++ [pickop ast]
@@ -67,54 +87,6 @@ pass3 ast = let (l, r) = getLR ast in l ++ ["PU"] ++ r ++ ["SW", "PO"] ++ [picko
     pickop (Sub _ _) = "SU"
     pickop (Mul _ _) = "MU"
     pickop (Div _ _) = "DI"
-
-
-alpha, digit :: String
-alpha = ['a'..'z'] ++ ['A'..'Z']
-digit = ['0'..'9']
-
-tokenize :: String -> [Token]
-tokenize [] = []
-tokenize xxs@(c:cs)
-  | c `elem` "-+*/()[]" = TChar c : tokenize cs
-  | not (null i) = TInt (read i) : tokenize is
-  | not (null s) = TStr s : tokenize ss
-  | otherwise = tokenize cs
-  where
-    (i, is) = span (`elem` digit) xxs
-    (s, ss) = span (`elem` alpha) xxs
-
-split :: [Token] -> ([Token], [Token])
-split (TChar '[':ts) = split ts
-split (TChar ']':ts) = ([], ts)
-split (t:ts) = let (nt, nts) = split ts in (t:nt, nts)
-
-parse :: [Token] -> [Token]
-parse = parsing [] []
-  where
-  parsing :: [Token] -> [Token] -> [Token] -> [Token]
-  parsing stack1 stack2 [] = merging stack1 stack2 [] [tau]
-  parsing stack1 stack2 (t:ts)
-    | isr t = parsing (t:stack1) stack2 ts
-    | isl t = merging stack1 stack2 (t:ts) [not . isr]
-    | any ($ t) [ism, isd] = parsing (t:stack1) stack2 ts
-    | any ($ t) [isp, iss] = merging stack1 stack2 (t:ts) [ism, isd]
-    | otherwise = parsing stack1 (t:stack2) ts
-  merging :: [Token] -> [Token] -> [Token] -> [(Token -> Bool)] -> [Token]
-  merging [] stack2 [] _ = stack2
-  merging [] stack2 (t:ts) _ = parsing [t] stack2 ts
-  merging (s:ss) stack2 tokens ps
-    | any ($ s) ps = merging ss (s : stack2) tokens ps
-    | isl $ head tokens = parsing ss stack2 (tail tokens)
-    | otherwise = parsing (head tokens : s : ss) stack2 (tail tokens)
-  isp, iss, ism, isd, isl, isr, tau :: Token -> Bool
-  isp = (== TChar '+')
-  iss = (== TChar '-')
-  ism = (== TChar '*')
-  isd = (== TChar '/')
-  isl = (== TChar '(')
-  isr = (== TChar ')')
-  tau _ = True
 
 simulate :: [String] -> [Int] -> Int
 simulate asm argv = takeR0 $ foldl step (0, 0, []) asm where

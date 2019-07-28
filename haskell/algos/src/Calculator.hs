@@ -41,8 +41,6 @@ parse = parsing [] []
     | any (p . ($ s)) [ism, isd] = merging ss (s : stack2) tokens p
     | otherwise = parsing (head tokens : s : ss) stack2 (tail tokens)
 
-isn = (isJust :: Maybe Double -> Bool) . readMaybe
-issy = flip any [isp, iss, ism, isd] . flip ($)
 isp = (== "+")
 iss = (== "-")
 ism = (== "*")

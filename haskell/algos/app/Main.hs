@@ -3,4 +3,4 @@ module Main where
 import TinyThreePassCompiler
 
 main :: IO ()
-main = putStrLn . show $ simulate (compile "[ x ] x + 2 * 5") [3]
+main = putStrLn . show $ pass1 "[ a b ] a*a + b*b"
