@@ -22,40 +22,31 @@ pass1 prog = fst . generates $ parsing [] [] $ reverse tokens
     split ('[':ts) = split ts
     split (']':ts) = (words $ seperates ts, [])
     split (t:ts) = let (nts, nt) = split ts in (nts, t:nt)
-    seperates [] = []
-    seperates (t:ts)
-      | elem t "+-*/()" = [' ', t, ' '] ++ seperates ts
-      | otherwise = t : seperates ts
+    seperates = foldl (\ acc t -> acc ++ if elem t "+-*/()" then [' ', t, ' '] else [t]) []
     generates (t:ts0)
-      | issy t = let (car, ts1) = generates ts0; (cdr, ts2) = generates ts1 in case t of
+      | elem t ["+", "-", "*", "/"] = let
+          (car, ts1) = generates ts0
+          (cdr, ts2) = generates ts1
+        in case t of
           "+" -> (Add car cdr, ts2)
           "-" -> (Sub car cdr, ts2)
           "*" -> (Mul car cdr, ts2)
           "/" -> (Div car cdr, ts2)
-      | isn t = (Imm $ read t, ts0)
+      | isJust $ (readMaybe t :: Maybe Int) = (Imm $ read t, ts0)
       | otherwise = (Arg $ fromJust $ flip elemIndex params t, ts0)
-    parsing stack1 stack2 [] = merging stack1 stack2 [] [tau]
+    parsing stack1 stack2 [] = merging stack1 stack2 [] $ \_ -> True
     parsing stack1 stack2 (t:ts)
-      | isr t = parsing (t:stack1) stack2 ts
-      | isl t = merging stack1 stack2 (t:ts) [not . isr]
-      | any ($ t) [ism, isd] = parsing (t:stack1) stack2 ts
-      | any ($ t) [isp, iss] = merging stack1 stack2 (t:ts) [ism, isd]
+      | t == ")" = parsing (t:stack1) stack2 ts
+      | t == "(" = merging stack1 stack2 (t:ts) $ not . (==) ")"
+      | elem t ["*", "/"] = parsing (t:stack1) stack2 ts
+      | elem t ["+", "-"] = merging stack1 stack2 (t:ts) $ flip elem ["*", "/"]
       | otherwise = parsing stack1 (t:stack2) ts
     merging [] stack2 [] _ = stack2
     merging [] stack2 (t:ts) _ = parsing [t] stack2 ts
-    merging (s:ss) stack2 tokens ps
-      | any ($ s) ps = merging ss (s : stack2) tokens ps
-      | isl $ head tokens = parsing ss stack2 (tail tokens)
+    merging (s:ss) stack2 tokens p
+      | p s = merging ss (s : stack2) tokens p
+      | head tokens == "(" = parsing ss stack2 (tail tokens)
       | otherwise = parsing (head tokens : s : ss) stack2 (tail tokens)
-    tau _ = True
-    isp = (==) "+"
-    iss = (==) "-"
-    ism = (==) "*"
-    isd = (==) "/"
-    isl = (==) "("
-    isr = (==) ")"
-    isn = (isJust :: Maybe Int -> Bool) . readMaybe
-    issy = flip any [isp, iss, ism, isd] . flip ($)
 
 pass2 :: AST -> AST
 pass2 (Imm v) = Imm v
@@ -70,7 +61,7 @@ pass2 ast = case recLR ast pass2 id of
 pass3 :: AST -> [String]
 pass3 (Imm v) = ["IM " ++ show v]
 pass3 (Arg i) = ["AR " ++ show i]
-pass3 ast = let (l, r) = recLR ast pass3 (\_ -> (,)) in l ++ ["PU"] ++ r ++ ["SW", "PO"] ++ [pickop ast]
+pass3 ast = let (_, l, r) = recLR ast pass3 (,,) in l ++ ["PU"] ++ r ++ ["SW", "PO", pickop ast]
   where
     pickop (Add _ _) = "AD"
     pickop (Sub _ _) = "SU"
