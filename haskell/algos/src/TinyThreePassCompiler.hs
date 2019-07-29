@@ -24,13 +24,10 @@ pass1 prog = fst . generates $ parsing [] [] $ reverse tokens
     split (t:ts) = let (nts, nt) = split ts in (nts, t:nt)
     seperates [] = []
     seperates (t:ts)
-      | elem t "+-*/" = [' ', t, ' '] ++ seperates ts
+      | elem t "+-*/()" = [' ', t, ' '] ++ seperates ts
       | otherwise = t : seperates ts
     generates (t:ts0)
-      | issy t = let
-          (car, ts1) = generates ts0
-          (cdr, ts2) = generates ts1
-        in case t of
+      | issy t = let (car, ts1) = generates ts0; (cdr, ts2) = generates ts1 in case t of
           "+" -> (Add car cdr, ts2)
           "-" -> (Sub car cdr, ts2)
           "*" -> (Mul car cdr, ts2)
@@ -63,34 +60,28 @@ pass1 prog = fst . generates $ parsing [] [] $ reverse tokens
 pass2 :: AST -> AST
 pass2 (Imm v) = Imm v
 pass2 (Arg i) = Arg i
-pass2 ast = case getLR ast of
+pass2 ast = case recLR ast pass2 id of
   Add (Imm v1) (Imm v2) -> Imm $ v1 + v2
   Sub (Imm v1) (Imm v2) -> Imm $ v1 - v2
   Mul (Imm v1) (Imm v2) -> Imm $ v1 * v2
   Div (Imm v1) (Imm v2) -> Imm $ v1 `div` v2
   nast -> nast
-  where
-    getLR :: AST -> AST
-    getLR (Add l r) = Add (pass2 l) (pass2 r)
-    getLR (Sub l r) = Sub (pass2 l) (pass2 r)
-    getLR (Mul l r) = Mul (pass2 l) (pass2 r)
-    getLR (Div l r) = Div (pass2 l) (pass2 r)
 
 pass3 :: AST -> [String]
 pass3 (Imm v) = ["IM " ++ show v]
 pass3 (Arg i) = ["AR " ++ show i]
-pass3 ast = let (l, r) = getLR ast in l ++ ["PU"] ++ r ++ ["SW", "PO"] ++ [pickop ast]
+pass3 ast = let (l, r) = recLR ast pass3 (\_ -> (,)) in l ++ ["PU"] ++ r ++ ["SW", "PO"] ++ [pickop ast]
   where
-    getLR :: AST -> ([String], [String])
-    getLR (Add l r) = (pass3 l, pass3 r)
-    getLR (Sub l r) = (pass3 l, pass3 r)
-    getLR (Mul l r) = (pass3 l, pass3 r)
-    getLR (Div l r) = (pass3 l, pass3 r)
-    pickop :: AST -> String
     pickop (Add _ _) = "AD"
     pickop (Sub _ _) = "SU"
     pickop (Mul _ _) = "MU"
     pickop (Div _ _) = "DI"
+
+recLR :: AST -> (AST -> a) -> ((AST -> AST -> AST) -> a -> a -> b)  -> b
+recLR (Add l r) f g = g Add (f l) (f r)
+recLR (Sub l r) f g = g Sub (f l) (f r)
+recLR (Mul l r) f g = g Mul (f l) (f r)
+recLR (Div l r) f g = g Div (f l) (f r)
 
 simulate :: [String] -> [Int] -> Int
 simulate asm argv = takeR0 $ foldl step (0, 0, []) asm where
