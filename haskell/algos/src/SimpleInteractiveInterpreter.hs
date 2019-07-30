@@ -1,103 +1,53 @@
 module SimpleInteractiveInterpreter where
---
---import Data.List (elemIndex)
---import Data.Maybe (fromJust)
---
------ Interpreter which represented the REPL environment
---data Interpreter
---data AST = Imm Int
---         | Arg Int
---         | Add AST AST
---         | Sub AST AST
---         | Mul AST AST
---         | Div AST AST
---         deriving (Eq, Show)
---type Result = Maybe Double
---
---newInterpreter :: Interpreter
---newInterpreter = undefined
---
---input :: String -> Interpreter -> Either String (Result, Interpreter)
---input _ _ = Left "Not implemented"
---
---
---
-----pass1 :: String -> AST
-----pass1 prog = fst . generates $ parse $ reverse tokens
-----  where
-----    (params, tokens) = split $ tokenize prog
-----    generates :: [String] -> (AST, [String])
-----    generates (TInt v:ts) = (Imm v, ts)
-----    generates (TStr s:ts) = (Arg $ fromJust $ flip elemIndex params $ TStr s, ts)
-----    generates (c:ts0) = case c of
-----      '+' -> (Add car cdr, ts2)
-----      '-' -> (Sub car cdr, ts2)
-----      '*' -> (Mul car cdr, ts2)
-----      '/' -> (Div car cdr, ts2)
-----      where
-----        (car, ts1) = generates ts0
-----        (cdr, ts2) = generates ts1
-----
-----pass2 :: AST -> AST
-----pass2 (Imm v) = Imm v
-----pass2 (Arg i) = Arg i
-----pass2 ast = case getLR ast of
-----  Add (Imm v1) (Imm v2) -> Imm $ v1 + v2
-----  Sub (Imm v1) (Imm v2) -> Imm $ v1 - v2
-----  Mul (Imm v1) (Imm v2) -> Imm $ v1 * v2
-----  Div (Imm v1) (Imm v2) -> Imm $ v1 `div` v2
-----  nast -> nast
-----  where
-----    getLR :: AST -> AST
-----    getLR (Add l r) = Add (pass2 l) (pass2 r)
-----    getLR (Sub l r) = Sub (pass2 l) (pass2 r)
-----    getLR (Mul l r) = Mul (pass2 l) (pass2 r)
-----    getLR (Div l r) = Div (pass2 l) (pass2 r)
-----
-------pass3 :: AST -> [String]
-----pass3 (Imm v) = ["IM " ++ show v]
-----pass3 (Arg i) = ["AR " ++ show i]
-----pass3 ast = let (l, r) = getLR ast in l ++ ["PU"] ++ r ++ ["SW", "PO"] ++ [pickop ast]
-----  where
-----    getLR :: AST -> ([String], [String])
-----    getLR (Add l r) = (pass3 l, pass3 r)
-----    getLR (Sub l r) = (pass3 l, pass3 r)
-----    getLR (Mul l r) = (pass3 l, pass3 r)
-----    getLR (Div l r) = (pass3 l, pass3 r)
-----    pickop :: AST -> String
-----    pickop (Add _ _) = "AD"
-----    pickop (Sub _ _) = "SU"
-----    pickop (Mul _ _) = "MU"
-----    pickop (Div _ _) = "DI"
---
---split :: [String] -> ([String], [String])
---split ('[':ts) = split ts
---split (']':ts) = ([], ts)
---split (t:ts) = let (nt, nts) = split ts in (t:nt, nts)
---
---parse :: [String] -> [String]
---parse = parsing [] []
---  where
---  parsing :: [String] -> [String] -> [String] -> [String]
---  parsing stack1 stack2 [] = merging stack1 stack2 [] [tau]
---  parsing stack1 stack2 (t:ts)
---    | isr t = parsing (t:stack1) stack2 ts
---    | isl t = merging stack1 stack2 (t:ts) [not . isr]
---    | any ($ t) [ism, isd] = parsing (t:stack1) stack2 ts
---    | any ($ t) [isp, iss] = merging stack1 stack2 (t:ts) [ism, isd]
---    | otherwise = parsing stack1 (t:stack2) ts
---  merging :: [String] -> [String] -> [String] -> [(Char -> Bool)] -> [String]
---  merging [] stack2 [] _ = stack2
---  merging [] stack2 (t:ts) _ = parsing [t] stack2 ts
---  merging (s:ss) stack2 tokens ps
---    | any ($ s) ps = merging ss (s : stack2) tokens ps
---    | isl $ head tokens = parsing ss stack2 (tail tokens)
---    | otherwise = parsing (head tokens : s : ss) stack2 (tail tokens)
---  isp, iss, ism, isd, isl, isr, tau :: Char -> Bool
---  isp = (==) '+'
---  iss = (==) '-'
---  ism = (==) '*'
---  isd = (==) '/'
---  isl = (==) '('
---  isr = (==) ')'
---  tau _ = True
+
+import Text.Read (readMaybe)
+import Data.List (elemIndex)
+import Data.Maybe (isJust, fromJust)
+
+--- Interpreter which represented the REPL environment
+type Result = Maybe Double
+data Interpreter
+data Arith = Plus | Minus | Times | Divide deriving (Show, Read)
+data Ast = Const Double
+         | Symbol String
+         | Proc Arith Ast Ast
+         | Invoke String [Ast]
+         | Closure String [Ast] Ast deriving (Show, Read)
+
+newInterpreter :: Interpreter
+newInterpreter = undefined
+
+input :: String -> Interpreter -> Either String (Result, Interpreter)
+input _ _ = Left "Not implemented"
+
+pass1 :: String -> [String]
+pass1 = reverse . words . foldl (\ acc t -> acc ++ if elem t "+-*/()" then [' ', t, ' '] else [t]) []
+  where
+--    generates (t:ts0)
+--      | elem t ["+", "-", "*", "/"] = let
+--          (car, ts1) = generates ts0
+--          (cdr, ts2) = generates ts1
+--        in case t of
+--          "+" -> (Add car cdr, ts2)
+--          "-" -> (Sub car cdr, ts2)
+--          "*" -> (Mul car cdr, ts2)
+--          "/" -> (Div car cdr, ts2)
+--      | isJust $ (readMaybe t :: Maybe Int) = (Imm $ read t, ts0)
+--      | otherwise = (Arg $ fromJust $ flip elemIndex params t, ts0)
+    parsing stack1 stack2 [] = merging stack1 stack2 [] $ \_ -> True
+    parsing stack1 stack2 (t:ts)
+      | t == ")" = parsing (t:stack1) stack2 ts
+      | t == "(" = merging stack1 stack2 (t:ts) $ not . (==) ")"
+      | t == "=" = merging stack1 stack2 (t:ts) $ not . (==) ")"
+      | t == "=>" = merging stack1 stack2 (t:ts) $ \_ -> True
+      | elem t ["*", "/"] = parsing (t:stack1) stack2 ts
+      | elem t ["+", "-"] = merging stack1 stack2 (t:ts) $ flip elem ["*", "/"]
+      | otherwise = parsing stack1 (t:stack2) ts
+    merging [] stack2 [] _ = stack2
+    merging [] stack2 (t:ts) _
+      | t == "=>" = parsing [] (t:stack2) ts
+      | otherwise = parsing [t] stack2 ts
+    merging (s:ss) stack2 tokens p
+      | p s = merging ss (s : stack2) tokens p
+      | head tokens == "(" = parsing ss stack2 (tail tokens)
+      | otherwise = parsing (head tokens : s : ss) stack2 (tail tokens)

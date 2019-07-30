@@ -1,5 +1,12 @@
 module Main where
 
+--import SimpleInteractiveInterpreter
+--
+--main :: IO ()
+--main = putStrLn . show $ pass1 "fn avg x y => (x + y) / 2"
+
+
+
 import TinyThreePassCompiler
 
 main :: IO ()

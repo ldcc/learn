@@ -3,8 +3,8 @@ module Calculator where
 import Text.Read (readMaybe)
 import Data.Maybe (isJust)
 
-data Ast = O Op Ast Ast | V Double deriving (Show, Read)
-data Op = Plus | Minus | Times | Divide deriving (Show, Read)
+data Ast = Proc Arith Ast Ast | V Double deriving (Show, Read)
+data Arith = Plus | Minus | Times | Divide deriving (Show, Read)
 
 evaluate :: String -> Double
 evaluate = calc . fst . pass . parse . reverse . words
@@ -12,17 +12,17 @@ evaluate = calc . fst . pass . parse . reverse . words
 pass :: [String] -> (Ast, [String])
 pass [p] = (V (read p), [])
 pass (p:ps0)
-  | isp p = (O Plus car cdr, ps2)
-  | iss p = (O Minus car cdr, ps2)
-  | ism p = (O Times car cdr, ps2)
-  | isd p = (O Divide car cdr, ps2)
+  | isp p = (Proc Plus car cdr, ps2)
+  | iss p = (Proc Minus car cdr, ps2)
+  | ism p = (Proc Times car cdr, ps2)
+  | isd p = (Proc Divide car cdr, ps2)
   | otherwise = (V (read p), ps0)
   where
     (car, ps1) = pass ps0
     (cdr, ps2) = pass ps1
 
 calc :: Ast -> Double
-calc (O op l r) = (pickop op) (calc l) (calc r)
+calc (Proc op l r) = (pickop op) (calc l) (calc r)
 calc (V v) = v
 
 parse :: [String] -> [String]

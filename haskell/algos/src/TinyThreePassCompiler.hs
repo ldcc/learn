@@ -51,28 +51,22 @@ pass1 prog = fst . generates $ parsing [] [] $ reverse tokens
 pass2 :: AST -> AST
 pass2 (Imm v) = Imm v
 pass2 (Arg i) = Arg i
-pass2 ast = case recLR ast pass2 id of
-  Add (Imm v1) (Imm v2) -> Imm $ v1 + v2
-  Sub (Imm v1) (Imm v2) -> Imm $ v1 - v2
-  Mul (Imm v1) (Imm v2) -> Imm $ v1 * v2
-  Div (Imm v1) (Imm v2) -> Imm $ v1 `div` v2
-  nast -> nast
+pass2 ast = recLR ast pass2 fst
 
 pass3 :: AST -> [String]
 pass3 (Imm v) = ["IM " ++ show v]
 pass3 (Arg i) = ["AR " ++ show i]
-pass3 ast = let (_, l, r) = recLR ast pass3 (,,) in l ++ ["PU"] ++ r ++ ["SW", "PO", pickop ast]
-  where
-    pickop (Add _ _) = "AD"
-    pickop (Sub _ _) = "SU"
-    pickop (Mul _ _) = "MU"
-    pickop (Div _ _) = "DI"
+pass3 ast = recLR ast pass3 $ \ op l r -> l ++ ["PU"] ++ r ++ ["SW", "PO", snd op]
 
-recLR :: AST -> (AST -> a) -> ((AST -> AST -> AST) -> a -> a -> b)  -> b
-recLR (Add l r) f g = g Add (f l) (f r)
-recLR (Sub l r) f g = g Sub (f l) (f r)
-recLR (Mul l r) f g = g Mul (f l) (f r)
-recLR (Div l r) f g = g Div (f l) (f r)
+recLR :: AST -> (AST -> a) -> ((AST -> AST -> AST, String) -> a -> a -> b) -> b
+recLR (Add l r) f g = g (mk (+) Add, "AD") (f l) (f r)
+recLR (Sub l r) f g = g (mk (-) Sub, "SU") (f l) (f r)
+recLR (Mul l r) f g = g (mk (*) Mul, "MU") (f l) (f r)
+recLR (Div l r) f g = g (mk div Div, "DI") (f l) (f r)
+
+mk :: (Int -> Int -> Int) -> (AST -> AST -> AST) -> AST -> AST -> AST
+mk f _ (Imm v1) (Imm v2) = Imm $ f v1 v2
+mk _ g l r = g l r
 
 simulate :: [String] -> [Int] -> Int
 simulate asm argv = takeR0 $ foldl step (0, 0, []) asm where
