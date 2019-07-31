@@ -84,7 +84,7 @@ public class Compiler {
 //		return isAS(op) || isMD(op) ? new BinOp(op, last, pass1Iter(tokens)) : last;
 //	}
 
-	private Deque<String> parse(Deque<String> tokens) {
+	private Deque<String> parsing(Deque<String> tokens) {
 		Deque<String> stack1 = new LinkedList<>();
 		Deque<String> stack2 = new LinkedList<>();
 		while (!tokens.isEmpty()) {
@@ -120,7 +120,7 @@ public class Compiler {
 		tokens.pop();
 		while (!(token = tokens.pop()).equals("]")) tem.add(token);
 		args = tem.toArray(new String[0]);
-		Deque<String> stack = parse(tokens);
+		Deque<String> stack = parsing(tokens);
 		return pass1Iter(stack);
 	}
 

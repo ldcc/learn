@@ -95,12 +95,12 @@ public class Interpreter {
       } else if (isMD(token)) {
         stack1.push(token);
       } else if (isAS(token)) {
-        while (!stack1.isEmpty() && isMD(stack1.peek())) stack2.push(stack1.poll());
+        while (!stack1.isEmpty() && isMD(stack1.peek())) stack2.push(stack1.pop());
         stack1.push(token);
-      } else if (isAssign(token)) {
+      } else if (token.equals("=")) {
         while (!stack1.isEmpty() && !stack1.peek().equals(")")) stack2.push(stack1.pop());
         stack1.push(token);
-      } else if (isFunction(token)) {
+      } else if (token.equals("=>")) {
         while (!stack1.isEmpty()) stack2.push(stack1.pop());
         stack2.push(token);
       }
@@ -124,9 +124,9 @@ public class Interpreter {
   private Ast getAst(Deque<String> tokens) {
     String token = tokens.pop();
     if (funMap.containsKey(token)) {
-      return new Func(token, getAsts(tokens, funMap.get(token).args.length));
+      return new Call(token, getAsts(tokens, funMap.get(token).args.length));
     } else if (token.matches("[-+*/%=]")) {
-      return new Op(token, getAst(tokens), getAst(tokens));
+      return new Arith(token, getAst(tokens), getAst(tokens));
     } else {
       return getAtom(token);
     }
@@ -134,7 +134,7 @@ public class Interpreter {
 
   private Ast[] getAsts(Deque<String> tokens, int len) {
     Ast[] asts = new Ast[len];
-    for (int i = 0; i < asts.length; i++) asts[i] = getAst(tokens);
+    for (int i = 0; i < len; i++) asts[i] = getAst(tokens);
     return asts;
   }
 
@@ -163,7 +163,7 @@ public class Interpreter {
 
   private boolean checkFnExpr(String[] args, Ast expr) {
     if (expr.op().matches("[-+*/%=]")) {
-      return checkFnExpr(args, ((Op) expr).car) && checkFnExpr(args, ((Op) expr).cdr);
+      return checkFnExpr(args, ((Arith) expr).car) && checkFnExpr(args, ((Arith) expr).cdr);
     } else {
       String val = ((Atom) expr).v;
       return isNumber(val) || Arrays.stream(args).anyMatch(arg -> arg.equals(val));
@@ -173,7 +173,7 @@ public class Interpreter {
   private Double calcIter(Ast ast) {
     if (ast == null) return null;
     if (ast.op().matches("[-+*/%]")) {
-      Op bin = (Op) ast;
+      Arith bin = (Arith) ast;
       Double car = calcIter(bin.car);
       Double cdr = calcIter(bin.cdr);
       switch (bin.op()) {
@@ -191,7 +191,7 @@ public class Interpreter {
           return null;
       }
     } else if (ast.op().equals("=")) {
-      Op bin = (Op) ast;
+      Arith bin = (Arith) ast;
       String key = ((Atom) bin.car).v;
       if (funMap.containsKey(key)) {
         throw new IllegalArgumentException("Identifier with conflicts");
@@ -207,9 +207,9 @@ public class Interpreter {
       }
       return null;
     } else if (funMap.containsKey(ast.op())) {
-      Func func = (Func) ast;
+      Call call = (Call) ast;
       Closure closure = funMap.get(ast.op());
-      extEnv(closure.args, func.asts);
+      extEnv(closure.args, call.asts);
       Double val = calcIter(closure.exp);
       strikeOut(closure.args);
       return val;
@@ -231,11 +231,13 @@ public class Interpreter {
     Deque<String> polish = parsing(tokenize(input));
     Ast ast = polish.peek().equals("fn") ? closure(polish) : getAst(polish);
 
+    System.out.print(input + " >>= " + ast + " >>= ");
     if (!polish.isEmpty()) {
+      System.out.println();
       throw new IllegalArgumentException("Mismatch expression");
     } else {
       Double result = calcIter(ast);
-      System.out.println(input + " >>= " + ast + " >>= " + result);
+      System.out.println(result);
       return result;
     }
   }
@@ -269,11 +271,11 @@ public class Interpreter {
     }
   }
 
-  private class Func implements Ast {
+  private class Call implements Ast {
     String op;
     Ast[] asts;
 
-    public Func(String op, Ast[] asts) {
+    public Call(String op, Ast[] asts) {
       this.op = op;
       this.asts = asts;
     }
@@ -289,12 +291,12 @@ public class Interpreter {
     }
   }
 
-  private class Op implements Ast {
+  private class Arith implements Ast {
     String op;
     Ast car;
     Ast cdr;
 
-    public Op(String op, Ast car, Ast cdr) {
+    public Arith(String op, Ast car, Ast cdr) {
       this.op = op;
       this.car = car;
       this.cdr = cdr;
