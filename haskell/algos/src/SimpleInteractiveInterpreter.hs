@@ -13,14 +13,14 @@ data Ast = Const Double
          | Closure [Ast] Ast deriving (Show, Read)
 
 newInterpreter :: Interpreter
-newInterpreter = fromList $ [("+", makeArith "+"), ("-", makeArith "-"), ("*", makeArith "*"), ("/", makeArith "/")]
+newInterpreter = fromList $ map (fmap makeArith) $ id >>= zip $ ["+", "-", "*", "/", "%"]
   where makeArith s = Closure [Symbol "x", Symbol "y"] $ Invoke s [Symbol "x", Symbol "y"]
 
-input :: String -> Interpreter -> Either String [String]
+--input :: String -> Interpreter -> Either String Ast
 input prog interp = Right (parse prog) >>= genAst interp
 
 parse :: String -> [String]
-parse = parsing [] [] . reverse . words . Prelude.foldl (\ acc t -> acc ++ if elem t "+-*/()" then [' ', t, ' '] else [t]) []
+parse = parsing [] [] . reverse . words . foldl (\ acc t -> acc ++ if elem t "+-*/()" then [' ', t, ' '] else [t]) []
   where
     parsing stack1 stack2 [] = merging stack1 stack2 [] $ \_ -> True
     parsing stack1 stack2 (t:ts)
@@ -28,7 +28,7 @@ parse = parsing [] [] . reverse . words . Prelude.foldl (\ acc t -> acc ++ if el
       | t == "(" = merging stack1 stack2 (t:ts) $ not . (==) ")"
       | t == "=" = merging stack1 stack2 (t:ts) $ not . (==) ")"
       | t == "=>" = merging stack1 stack2 (t:ts) $ \_ -> True
-      | elem t ["*", "/"] = parsing (t:stack1) stack2 ts
+      | elem t ["*", "/", "%"] = parsing (t:stack1) stack2 ts
       | elem t ["+", "-"] = merging stack1 stack2 (t:ts) $ flip elem ["*", "/"]
       | otherwise = parsing stack1 (t:stack2) ts
     merging [] stack2 [] _ = stack2
@@ -40,7 +40,7 @@ parse = parsing [] [] . reverse . words . Prelude.foldl (\ acc t -> acc ++ if el
       | head tokens == "(" = parsing ss stack2 (tail tokens)
       | otherwise = parsing (head tokens : s : ss) stack2 (tail tokens)
 
-genAst :: Interpreter -> [String] -> Either String [String]
+--genAst :: Interpreter -> [String] -> Either String Ast
 genAst interp ("fn":name:ts) = case Map.lookup name interp of
   Just (Const _) -> Left "Conflicts Error!"
   _ -> genAst interp $ name : "=" : "fn" : ts
@@ -59,4 +59,3 @@ genAst interp (t:ts0) = Right $ t : ts0
 --  | otherwise = (Arg $ fromJust $ flip elemIndex params t, ts0)
 
 --closure
-
