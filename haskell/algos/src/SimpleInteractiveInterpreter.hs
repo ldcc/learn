@@ -1,6 +1,7 @@
 module SimpleInteractiveInterpreter where
 
 import Text.Read (readMaybe)
+import Control.Arrow ((&&&))
 import Data.List (elemIndex)
 import Data.Maybe (isJust, fromJust)
 import Data.Map as Map (Map, fromList, lookup, insert, (!), member)
@@ -9,12 +10,13 @@ type Result = Maybe Double
 type Interpreter = Map String Ast
 data Ast = Const Double
          | Symbol String
+         | Assign String Ast
          | Invoke String [Ast]
          | Closure [Ast] Ast deriving (Show, Read)
 
 newInterpreter :: Interpreter
-newInterpreter = fromList $ map (fmap makeArith) $ id >>= zip $ ["+", "-", "*", "/", "%"]
-  where makeArith s = Closure [Symbol "x", Symbol "y"] $ Invoke s [Symbol "x", Symbol "y"]
+newInterpreter = fromList $ "+-*/%" >>= \x -> [id &&& gen $ [x]]
+  where gen s = Closure [Symbol "x", Symbol "y"] $ Invoke s [Symbol "x", Symbol "y"]
 
 --input :: String -> Interpreter -> Either String Ast
 input prog interp = Right (parse prog) >>= genAst interp
@@ -40,11 +42,21 @@ parse = parsing [] [] . reverse . words . foldl (\ acc t -> acc ++ if elem t "+-
       | head tokens == "(" = parsing ss stack2 (tail tokens)
       | otherwise = parsing (head tokens : s : ss) stack2 (tail tokens)
 
---genAst :: Interpreter -> [String] -> Either String Ast
+--genAst :: Interpreter -> [String] -> Either String (Ast, [String], Interpreter)
 genAst interp ("fn":name:ts) = case Map.lookup name interp of
-  Just (Const _) -> Left "Conflicts Error!"
-  _ -> genAst interp $ name : "=" : "fn" : ts
-genAst interp (t:ts0) = Right $ t : ts0
+  Just (Const _) -> (Left "Conflicts Error!", [])
+  _ -> genClosure interp name $ break (== "=>") ts
+genAst interp ("=":name:ts) = case Map.lookup name interp of
+  Just (Closure _ _) -> (Left "Conflicts Error!", [], interp)
+  _ -> genAst interp ts >>= \ (exp, nts, ninterp) -> Right (Assign name exp, nts, ninterp)
+genAst interp (t:ts)
+  | member t interp = Right $ genInvoke interp t ts
+  | isJust $ (readMaybe t :: Maybe Double) = (Right $ Const $ read t, ts)
+--  | otherwise = (Right $ Symbol t, ts)
+
+
+--genClosure interp name (pre, (_:exp)) =
+
 
 --  | member interp t =
 --  | elem t ["+", "-", "*", "/"] = let
