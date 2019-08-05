@@ -4,7 +4,7 @@ import Text.Read (readMaybe)
 import Control.Arrow ((&&&))
 import Data.List (elemIndex)
 import Data.Maybe (isJust, fromJust)
-import Data.Map as Map (Map, fromList, lookup, insert, (!), member)
+import Data.Map as Map (Map, fromList, member, insert, delete, (!), (!?))
 
 type Result = Maybe Double
 type Interpreter = Map String Ast
@@ -12,17 +12,21 @@ data Ast = Const Double
          | Symbol String
          | Assign String Ast
          | Invoke String [Ast]
-         | Closure [Ast] Ast deriving (Show, Read)
+         | Closure String [String] Ast deriving (Show, Read)
+
+pmm_err = Left "Parameter Missmatch!"
+conf_err = Left "Conflict Definition!"
+ukno_err = Left "Unknown Identifier!"
 
 newInterpreter :: Interpreter
 newInterpreter = fromList $ "+-*/%" >>= \x -> [id &&& gen $ [x]]
-  where gen s = Closure [Symbol "x", Symbol "y"] $ Invoke s [Symbol "x", Symbol "y"]
+  where gen s = Closure s ["x", "y"] $ Invoke s [Symbol "x", Symbol "y"]
 
---input :: String -> Interpreter -> Either String Ast
-input prog interp = Right (parse prog) >>= genAst interp
+--input :: String -> Interpreter -> Either String (Result, Interpreter)
+input prog env = parse prog >>= genAst env >>= interp env
 
-parse :: String -> [String]
-parse = parsing [] [] . reverse . words . foldl (\ acc t -> acc ++ if elem t "+-*/()" then [' ', t, ' '] else [t]) []
+parse :: String -> Either String [String]
+parse = return . parsing [] [] . reverse . words . foldl (\ acc t -> acc ++ if elem t "+-*/%()" then [' ', t, ' '] else [t]) []
   where
     parsing stack1 stack2 [] = merging stack1 stack2 [] $ \_ -> True
     parsing stack1 stack2 (t:ts)
@@ -42,32 +46,35 @@ parse = parsing [] [] . reverse . words . foldl (\ acc t -> acc ++ if elem t "+-
       | head tokens == "(" = parsing ss stack2 (tail tokens)
       | otherwise = parsing (head tokens : s : ss) stack2 (tail tokens)
 
---genAst :: Interpreter -> [String] -> Either String (Ast, [String], Interpreter)
-genAst interp ("fn":name:ts) = case Map.lookup name interp of
-  Just (Const _) -> (Left "Conflicts Error!", [])
-  _ -> genClosure interp name $ break (== "=>") ts
-genAst interp ("=":name:ts) = case Map.lookup name interp of
-  Just (Closure _ _) -> (Left "Conflicts Error!", [], interp)
-  _ -> genAst interp ts >>= \ (exp, nts, ninterp) -> Right (Assign name exp, nts, ninterp)
-genAst interp (t:ts)
-  | member t interp = Right $ genInvoke interp t ts
-  | isJust $ (readMaybe t :: Maybe Double) = (Right $ Const $ read t, ts)
---  | otherwise = (Right $ Symbol t, ts)
+genAst :: Interpreter -> [String] -> Either String Ast
+genAst env ts = gen env ts >>= \ (nts, ast) -> if length nts > 0 then pmm_err else return ast
+  where
+  gen env ("fn":id:ts) = genClosure env id $ break (== "=>") ts
+  gen env ("=":id:ts) = gen env ts >>= return . fmap (Assign id)
+  gen env (t:ts)
+    | member t env = genInvoke env t ts
+    | isJust $ (readMaybe t :: Maybe Double) = return $ fmap (Const . read) (ts, t
+    | otherwise = return $ fmap Symbol (ts, t)
+  gen env _ = pmm_err
+  genClosure env id (args, (_:ts)) = gen env ts >>= return . fmap (Closure id args)
+  genInvoke env name ts = let Closure _ args _ = env ! name in
+    foldl f (return (ts, [])) args >>= return . fmap (Invoke name)
+    where f acc _ = acc >>= \ (ts, exps) -> gen env ts >>= return . fmap ((exps ++) . (:[]))
 
+--interp :: Interpreter -> Ast -> Either String (Result, Interpreter)
+interp env (Const n) = return (return n, env)
+interp env (Symbol s) = lookup env s >>= interp env
+interp env (Assign n) = return (return n, env)
+interp env (Invoke n) = return (return n, env)
+interp env (Closure n) = return (return n, env)
 
---genClosure interp name (pre, (_:exp)) =
+lookup :: Interpreter -> String -> Either String Ast
+lookup env s = case env !? s of
+  Just ast -> return ast
+  Nothing -> ukno_err
 
-
---  | member interp t =
---  | elem t ["+", "-", "*", "/"] = let
---      (car, ts1) = generates ts0
---      (cdr, ts2) = generates ts1
---    in case t of
---      "+" -> (Add car cdr, ts2)
---      "-" -> (Sub car cdr, ts2)
---      "*" -> (Mul car cdr, ts2)
---      "/" -> (Div car cdr, ts2)
---  | isJust $ (readMaybe t :: Maybe Int) = (Imm $ read t, ts0)
---  | otherwise = (Arg $ fromJust $ flip elemIndex params t, ts0)
-
---closure
+--extend :: String -> Ast -> Interpreter -> Interpreter
+--extend = insert
+--
+--extend :: String -> Interpreter -> Interpreter
+--strikeOut = delete
