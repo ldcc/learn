@@ -63,42 +63,30 @@ genAst env ts = gen ts >>= \ (nts, ast) -> if length nts > 0 then pmm_err else r
 
 interp :: Interpreter -> Ast -> Either String (Result, Interpreter)
 interp env (Const v) = return (return v, env)
-interp env (Symbol k) = fst env !? k !>>= interp env =<< return ukno_err
-interp env (Assign k ast) = snd env !? k !>> conf_err =<< return . fmap (fmap (insert k ast)) <$> interp env ast
--- (fmap (fmap (insert k ast)) <$> interp env ast)
-
+interp env (Symbol k) = interp env !>>= (fst env !? k) =<<! ukno_err
+interp env (Assign k e) = conf_err !>> (snd env !? k) =<<! (fmap (fmap (insert k e)) <$> interp env e)
 --interp env (Invoke k asts) = return (return n, env)
 --interp env (Closure k args exp) = fst env ?*? k >> return (Nothing, insert k (Closure k args exp) env)
 
---class Monad (m) => EitherT (m) where
---  (!>>) :: m a -> (Either String a) -> (Either String a)
---
---instance EitherT (Maybe) where
---  (Just x) !>> y = y >> return x
---  Nothing !>> y = y >> Left "Transformation Error!"
-
 class Monad m => MaybeT m where
-  (!>>) :: Maybe a -> m b -> m b -> m b
-  (!>>=) :: Maybe a -> (a -> m b) -> m b -> m b
+  (!>>) :: m b -> Maybe a -> m b -> m b
+  (!>>=) :: (a -> m b) -> Maybe a -> m b -> m b
+  (=<<!) :: (a -> m b) -> a -> m b
 
 instance MaybeT (Either e) where
-  (Just _) !>> y = \ _ -> y
-  Nothing !>> _ = \ z -> z
-  (Just x) !>>= f = \ _ -> f x
-  Nothing !>>= f = \ y -> y
+  a !>> (Just _) = \ _ -> a
+  _ !>> Nothing = \ b -> b
+  f !>>= (Just a)  = \ _ -> f a
+  f !>>= Nothing = \ y -> y
+  f =<<! x = f x
 
---  (Just _) !>> y = \ _ -> y
---  Nothing !>> _ = \ z -> z
---  (Just x) !>>= f = \ _ -> f x
---  Nothing !>>= f = \ y -> y
 
 --Three Unit Operator of Maybe Monad Transformer
--- maybe !>> e1 =<< e2 == case maybe of Just _ -> e2; Nothing -> e1
--- maybe !>>= f =<< e == case maybe of Just x -> f x; Nothing -> e
+-- maybe !>> e1 =<<! e2 == case maybe of Just _ -> e2; Nothing -> e1
+-- maybe !>>= f =<<! e == case maybe of Just x -> f x; Nothing -> e
 
-
-
-
+-- maybe !>> e1 =<<! e2 == maybe !>> e1 =<< return e2
+-- maybe !>>= f =<<! e == maybe !>>= f =<< return e
 
 --type Φ = Maybe
 --type Ψ = Either e
