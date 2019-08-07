@@ -50,16 +50,16 @@ genAst :: Interpreter -> [String] -> Either String Ast
 genAst env ts = gen ts >>= \ (nts, ast) -> if length nts > 0 then pmm_err else return ast
   where
   gen ("fn":k:ts) = genClosure k $ break (== "=>") ts
-  gen ("=":k:ts) = gen ts >>= return . fmap (Assign k)
+  gen ("=":k:ts) = fmap (Assign k) <$> gen ts
   gen (t:ts)
     | isJust $ (readMaybe t :: Maybe Double) = return $ fmap (Const . read) (ts, t)
     | member t $ snd env = genInvoke t ts
     | otherwise = return $ fmap Symbol (ts, t)
   gen _ = pmm_err
-  genClosure k (args, (_:ts)) = gen ts >>= return . fmap (Closure k args)
+  genClosure k (args, (_:ts)) = fmap (Closure k args) <$> gen ts
   genInvoke k ts = let Closure _ args _ = snd env ! k in
-    foldl f (return (ts, [])) args >>= return . fmap (Invoke k)
-    where f acc _ = acc >>= \ (ts, exps) -> gen ts >>= return . fmap ((exps ++) . (:[]))
+    fmap (Invoke k) <$> foldl f (return (ts, [])) args
+    where f acc _ = acc >>= \ (ts, exps) -> fmap ((exps ++) . return) <$> gen ts
 
 interp :: Interpreter -> Ast -> Either String (Result, Interpreter)
 interp env (Const v) = return (return v, env)
