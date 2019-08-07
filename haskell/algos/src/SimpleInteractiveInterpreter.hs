@@ -1,4 +1,4 @@
-Maybeodule SimpleInteractiveInterpreter where
+module SimpleInteractiveInterpreter where
 
 import Text.Read (readMaybe)
 import Control.Arrow ((&&&))
@@ -7,7 +7,7 @@ import Data.Maybe (isJust, fromJust)
 import Data.Map as Map (Map, fromList, member, insert, delete, (!), (!?))
 
 type Result = Maybe Double
-type Interpreter = (Map String Ast, Map String Ast) -- (env, closure)
+type Interpreter = (Map String Ast, Map String Ast)
 data Ast = Const Double
          | Symbol String
          | Assign String Ast
@@ -19,7 +19,7 @@ conf_err = Left "Conflict Definition!"
 ukno_err = Left "Unknown Identifier!"
 
 newInterpreter :: Interpreter
-newInterpreter = (fromList [], fromList $ "+-*/%" >>= \x -> [id &&& gen $ [x]])
+newInterpreter = (fromList [("x", Const 5)], fromList $ "+-*/%" >>= \x -> [id &&& gen $ [x]])
   where gen s = Closure s ["x", "y"] $ Invoke s [Symbol "x", Symbol "y"]
 
 input :: String -> Interpreter -> Either String (Result, Interpreter)
@@ -63,30 +63,30 @@ genAst env ts = gen ts >>= \ (nts, ast) -> if length nts > 0 then pmm_err else r
 
 interp :: Interpreter -> Ast -> Either String (Result, Interpreter)
 interp env (Const v) = return (return v, env)
-interp env (Symbol k) = fst env !? k >>=! interp env
-interp env (Assign k ast) = snd env !? k >>! interp env ast >>= return . fmap (fmap (insert k ast))
+interp env (Symbol k) = return ukno_err >>= fst env !? k >>=! interp env
+--interp env (Assign k ast) = snd env !? k >>! interp env ast >>= return . fmap (fmap (insert k ast))
 --interp env (Invoke k asts) = return (return n, env)
 --interp env (Closure k args exp) = fst env ?*? k >> return (Nothing, insert k (Closure k args exp) env)
 
-class (Maybe a, Monad m) => MaybeT m where
-  (>>!) :: Maybe a -> m b -> m b
-  (>>=!) :: Maybe a -> (a -> b) -> m b
+--class Monad (m) => EitherT (m) where
+--  (>>!) :: m a -> (Either String a) -> (Either String a)
+--
+--instance EitherT (Maybe) where
+--  (Just x) >>! y = y >> return x
+--  Nothing >>! y = y >> Left "Transformation Error!"
 
-instance MaybeT (Either String) where
-  (Just x) >>! y = y >> return x
-  Nothing >>! _ = Left "Transformation Error!"
-  (Just x) >>=! f = return . f x
-  Nothing >>=! _ = Left "Transformation Error!"
+class Monad m => MaybeT m where
+  (>>!) :: Maybe a -> m b -> m b -> m b
+  (>>=!) :: Maybe a -> (a -> m b) -> m b -> m b
 
---  (Just _) >>! y = \ _ -> y
---  Nothing >>! y = id
---  (Just x) >>=! f = \ _ -> f x
---  (Nothing) >>=! f = id
+instance MaybeT (Either e) where
+  (Just _) >>! y = \ _ -> y
+  Nothing >>! _ = \ z -> z
+  (Just x) >>=! f = \ _ -> f x
+  Nothing >>=! f = \ y -> y
 
 --type Φ = Maybe
 --type Ψ = Either e
---
 --Γ :: Φ a -> Ψ a -> Ψ a
 --Γ (Just a) = \ (Right x) -> Right
---
 --(Ψ f) <*> Γ :: Φ a -> Ψ b
