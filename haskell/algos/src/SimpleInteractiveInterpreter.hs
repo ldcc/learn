@@ -14,6 +14,18 @@ data Ast = Const Double
          | Invoke String [Ast]
          | Closure String [String] Ast deriving (Show, Read)
 
+class Monad m => MaybeT m where
+  (!>>) :: Maybe a -> m b -> m b -> m b
+  (!>>=) :: Maybe a -> (a -> m b) -> m b -> m b
+  (>>!) :: (a -> m b) -> a -> m b
+
+instance MaybeT (Either e) where
+  Nothing !>> _ = id
+  _ !>> y = (>> y)
+  Nothing !>>= _ = id
+  (Just x) !>>= f = \ _ -> f x
+  f >>! x = f x
+
 pmm_err = Left "Parameter Missmatch!"
 conf_err = Left "Conflict Definition!"
 ukno_err = Left "Unknown Identifier!"
@@ -59,26 +71,28 @@ genAst env ts = gen ts >>= \ (nts, ast) -> if length nts > 0 then pmm_err else r
   genClosure k (args, (_:ts)) = fmap (Closure k args) <$> gen ts
   genInvoke k ts = let Closure _ args _ = snd env ! k in
     fmap (Invoke k) <$> foldl f (return (ts, [])) args
-    where f acc _ = acc >>= \ (ts, exps) -> fmap ((exps ++) . return) <$> gen ts
+    where f acc _ = acc >>= \ (ts, asts) -> fmap ((asts <>) . return) <$> gen ts
 
 interp :: Interpreter -> Ast -> Either String (Result, Interpreter)
 interp env (Const v) = return (return v, env)
 interp env (Symbol k) = fst env !? k !>>= interp env >>! ukno_err
 interp env (Assign k ast) = snd env !? k !>> conf_err >>! (fmap (fmap (insert k ast)) <$> interp env ast)
---interp env (Invoke k asts) = fmap (interp env) <$> asts
---interp env (Closure k args exp) = fst env ?*? k >> return (Nothing, insert k (Closure k args exp) env)
+interp env (Invoke k asts) = snd env ! k !>>= invoke >>! ukno_err
+  where
+    gen e acc = acc >>= \ (vs, env0) -> fmapL (:vs) <$> interp env0 e
+    invoke Closure name args exp = foldr gen (return ([], env)) >>= ???
 
-class Monad m => MaybeT m where
-  (!>>) :: Maybe a -> m b -> m b -> m b
-  (!>>=) :: Maybe a -> (a -> m b) -> m b -> m b
-  (>>!) :: (a -> m b) -> a -> m b
 
-instance MaybeT (Either e) where
-  Nothing !>> _ = id
-  _ !>> y = (>> y)
-  Nothing !>>= _ = id
-  (Just x) !>>= f = \ _ -> f x
-  f >>! x = f x
+
+--      | length asts == length args = case foldr gen (return ([], env)) of
+--      | otherwise = ukno_err
+
+extEnv :: [(String, Ast)] -> Interpreter -> Interpreter
+extEnv [] = id
+extEnv (p:ps) = extEnv (p:ps) $ fmapL (uncurry insert p)
+
+fmapL :: (a -> b) -> ((,) a) t -> ((,) b) t
+fmapL f (x, y) = (f x, y)
 
 --instance MaybeT [] where
 --  xs !>> y = \ _ -> y
@@ -86,11 +100,10 @@ instance MaybeT (Either e) where
 --  f >>! x = f x
 
 --Three Unit Operator of Maybe Monad Transformer
-
--- maybe !>> e1 >>! e2 <=> case maybe of Just _ -> e1; Nothing -> e2
--- maybe !>>= f >>! e <=> case maybe of Just x -> f x; Nothing -> e
--- (f >>! x) <=> (f =<< return x)
-
+--  (Φ a) !>> (Ψ a)_1 >>! (Ψ a)_2 <=> case (Φ a) of Just _ -> (Ψ a)_1; Nothing -> (Ψ a)_2
+--         (Φ a) !>>= f >>! (Ψ a) <=> case (Φ a) of Just x -> f x; Nothing -> (Ψ a)
+--                      (f >>! a) <=> (f =<< return a)
+--
 --type Φ = Maybe
 --type Ψ = Either e
 --Γ :: Φ a -> Ψ a -> Ψ a
