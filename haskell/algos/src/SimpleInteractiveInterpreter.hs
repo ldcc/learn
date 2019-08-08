@@ -6,33 +6,41 @@ import Data.List (elemIndex)
 import Data.Maybe (isJust, fromJust)
 import Data.Map as Map (Map, fromList, member, insert, delete, (!), (!?))
 
-type Result = Maybe Double
+type Result = Maybe Int
 type Interpreter = (Map String Ast, Map String Ast)
-data Ast = Const Double
+data Ast = Void
+         | Const Int
          | Symbol String
          | Assign String Ast
          | Invoke String [Ast]
          | Closure String [String] Ast deriving (Show, Read)
 
-class Monad m => MaybeT m where
-  (!>>) :: Maybe a -> m b -> m b -> m b
-  (!>>=) :: Maybe a -> (a -> m b) -> m b -> m b
-  (>>!) :: (a -> m b) -> a -> m b
+class Monad m => MonadT m where
+  (>>?) :: Monad n => m a -> n b -> n b -> n b
+  (>>=?) :: Monad n => m a -> (a -> n b) -> n b -> n b
 
-instance MaybeT (Either e) where
-  Nothing !>> _ = id
-  _ !>> y = (>> y)
-  Nothing !>>= _ = id
-  (Just x) !>>= f = \ _ -> f x
-  f >>! x = f x
+instance MonadT Maybe where
+  Nothing >>? _ = id
+  _ >>? y = \ _ -> y
+  Nothing >>=? _ = id
+  (Just x) >>=? f = \ _ -> f x
+
+instance MonadT [] where
+  [] >>? y = id
+  _ >>? y = \ _ -> y
+  [] >>=? _ = id
+  (x:xs) >>=? f = \ _ -> foldl (flip (.) f . (>>)) (f x) xs
+
+(>>!) :: Monad m => (a -> m b) -> a -> m b
+f >>! x = f =<< return x
 
 pmm_err = Left "Parameter Missmatch!"
 conf_err = Left "Conflict Definition!"
 ukno_err = Left "Unknown Identifier!"
 
 newInterpreter :: Interpreter
-newInterpreter = (fromList [("x", Const 5)], fromList $ "+-*/%" >>= \x -> [id &&& gen $ [x]])
-  where gen s = Closure s ["x", "y"] $ Invoke s [Symbol "x", Symbol "y"]
+newInterpreter = (fromList [], fromList $ "+-*/%" >>= \x -> [id &&& gen $ [x]])
+  where gen s = Closure s ["a", "b"] Void
 
 input :: String -> Interpreter -> Either String (Result, Interpreter)
 input prog env = return prog >>= return . parse >>= genAst env >>= interp env
@@ -64,7 +72,7 @@ genAst env ts = gen ts >>= \ (nts, ast) -> if length nts > 0 then pmm_err else r
   gen ("fn":k:ts) = genClosure k $ break (== "=>") ts
   gen ("=":k:ts) = fmap (Assign k) <$> gen ts
   gen (t:ts)
-    | isJust $ (readMaybe t :: Maybe Double) = return $ fmap (Const . read) (ts, t)
+    | isJust $ (readMaybe t :: Maybe Int) = return $ fmap (Const . read) (ts, t)
     | member t $ snd env = genInvoke t ts
     | otherwise = return $ fmap Symbol (ts, t)
   gen _ = pmm_err
@@ -75,33 +83,54 @@ genAst env ts = gen ts >>= \ (nts, ast) -> if length nts > 0 then pmm_err else r
 
 interp :: Interpreter -> Ast -> Either String (Result, Interpreter)
 interp env (Const v) = return (return v, env)
-interp env (Symbol k) = fst env !? k !>>= interp env >>! ukno_err
-interp env (Assign k ast) = snd env !? k !>> conf_err >>! (fmap (fmap (insert k ast)) <$> interp env ast)
-interp env (Invoke k asts) = snd env ! k !>>= invoke >>! ukno_err
-  where
-    gen e acc = acc >>= \ (vs, env0) -> fmapL (:vs) <$> interp env0 e
-    invoke Closure name args exp = foldr gen (return ([], env)) >>= ???
+interp env (Symbol k) = fst env !? k >>=? interp env >>! ukno_err
+interp env (Assign k ast) = snd env !? k >>? conf_err $ fmap (fmap (insert k ast)) <$> interp env ast
+interp env (Invoke "+" asts) = calc (+) asts env
+interp env (Invoke "-" asts) = calc (-) asts env
+interp env (Invoke "*" asts) = calc (*) asts env
+interp env (Invoke "/" asts) = calc div asts env
+interp env (Invoke "%" asts) = calc rem asts env
+--interp env (Invoke k asts) = snd env ! k >>=? invoke >>! ukno_err
+--  where
+--    gen e acc = acc >>= \ (vs, env0) -> fmapL (:vs) <$> interp env0 e
+--    invoke Closure name args exp =
+--    do -- Branch with Dynamic-Scoping and Lexical-Scoping here
+--
+--      (vs, env1) <- foldr gen (return ([], env)) asts -- :: Either String ([Maybe Double], Interpreter)
+--      if length vs != length args then ukno_err else foldl1 (>>) vs >>? return >>! ukno_err
 
+calc :: (Int -> Int -> Int) -> [Ast] -> Interpreter -> Either String (Result, Interpreter)
+calc f [l, r] env0 = do
+  (x, env1) <- interp env0 l
+  (y, env2) <- interp env1 r
+  return (f <$> x <*> y, env2)
 
+--interp env (Invoke k asts) = snd env ! k >>=? invoke >>! ukno_err
+--  where
+--    gen e acc = acc >>= \ (vs, env0) -> fmapL (:vs) <$> interp env0 e
+--    invoke Closure name args exp = do -- Branch with Dynamic-Scoping and Lexical-Scoping here
+--      (vs, env1) <- foldr gen (return ([], env)) asts -- :: Either String ([Maybe Double], Interpreter)
+--      if length vs != length args then ukno_err else foldl1 (>>) vs >>? return >>! ukno_err
 
 --      | length asts == length args = case foldr gen (return ([], env)) of
 --      | otherwise = ukno_err
 
 extEnv :: [(String, Ast)] -> Interpreter -> Interpreter
+extEnv (p:ps) = extEnv ps . fmapL (uncurry insert p)
 extEnv [] = id
-extEnv (p:ps) = extEnv (p:ps) $ fmapL (uncurry insert p)
-
 fmapL :: (a -> b) -> ((,) a) t -> ((,) b) t
 fmapL f (x, y) = (f x, y)
+fmapR :: (a -> b) -> ((,) t) a -> ((,) t) b
+fmapR f (x, y) = (x, f y)
 
 --instance MaybeT [] where
---  xs !>> y = \ _ -> y
---  xs !>>= f = \ _ -> f x
+--  xs >>? y = \ _ -> y
+--  xs >>=? f = \ _ -> f x
 --  f >>! x = f x
 
 --Three Unit Operator of Maybe Monad Transformer
---  (Φ a) !>> (Ψ a)_1 >>! (Ψ a)_2 <=> case (Φ a) of Just _ -> (Ψ a)_1; Nothing -> (Ψ a)_2
---         (Φ a) !>>= f >>! (Ψ a) <=> case (Φ a) of Just x -> f x; Nothing -> (Ψ a)
+--  (Φ a) >>? (Ψ a)_1 >>! (Ψ a)_2 <=> case (Φ a) of Just _ -> (Ψ a)_1; Nothing -> (Ψ a)_2
+--         (Φ a) >>=? f >>! (Ψ a) <=> case (Φ a) of Just x -> f x; Nothing -> (Ψ a)
 --                      (f >>! a) <=> (f =<< return a)
 --
 --type Φ = Maybe

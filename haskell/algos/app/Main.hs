@@ -4,4 +4,4 @@ import Data.Either (fromRight)
 import SimpleInteractiveInterpreter
 
 main :: IO ()
-main = putStrLn . show $ input "x = 2" newInterpreter >>= return . fst
+main = putStrLn . show $ input "x = 3 + 2" newInterpreter >>= return . fst
