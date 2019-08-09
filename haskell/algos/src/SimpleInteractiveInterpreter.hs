@@ -4,8 +4,8 @@ import Text.Read (readMaybe)
 import Control.Arrow ((&&&))
 import Data.List (elemIndex)
 import Data.Maybe (isJust, fromJust)
-import Data.Map (Map, fromList, member, insert, delete, (!), (!?))
-import qualified Data.Map
+import Data.Map (Map, fromList, insert, (!), (!?))
+import qualified Data.Set as Set (fromList, size)
 
 type Result = Maybe Int
 type Interpreter = (Map String Ast, Map String Ast)
@@ -14,7 +14,8 @@ data Ast = Void
          | Symbol String
          | Assign String Ast
          | Invoke String [Ast]
-         | Closure String [String] Ast deriving (Show, Read)
+         | Closure String [String] Ast
+         deriving (Show, Read)
 
 class Monad m => MonadT m where
   (>>?) :: Monad n => m a -> n b -> n b -> n b
@@ -26,16 +27,19 @@ instance MonadT Maybe where
   Nothing >>=? _ = id
   (Just x) >>=? f = \ _ -> f x
 
+arith_set = ["+","-","*","/","%"]
 pmm_err = Left "Parameter Missmatch!"
-conf_err = Left "Conflict Definition!"
 ukno_err = Left "Unknown Identifier!"
+conf_err = Left "Conflict Definition!"
 
 newInterpreter :: Interpreter
-newInterpreter = (fromList [], fromList $ "+-*/%" >>= \x -> [id &&& gen $ [x]])
+newInterpreter = (fromList [], fromList $ arith_set >>= return . (id &&& gen))
   where gen s = Closure s ["a", "b"] Void
 
---input :: String -> Interpreter -> Either String (Result, Interpreter)
-input prog env = return (parse prog) >>= genAst env>>= interp env
+input :: String -> Interpreter -> Either String (Result, Interpreter)
+input prog env = return (parse prog) >>= genAst env >>= checkAst >>= interp env
+
+--------------------------- parser ---------------------------
 
 parse :: String -> [String]
 parse = parsing [] [] . reverse . words . foldl (\ acc t -> acc ++ if elem t "+-*/%()" then [' ', t, ' '] else [t]) []
@@ -67,11 +71,22 @@ genAst env ts = gen ts >>= \ (nts, ast) -> if length nts > 0 then pmm_err else r
     gen ("fn":k:ts) = genClosure k $ break (== "=>") ts
     gen (t:ts)
       | isJust $ (readMaybe t :: Maybe Int) = return $ fmap (Const . read) (ts, t)
-      | member t $ snd env = genInvoke t ts
+      | isJust $ snd env !? t = genInvoke t ts
       | otherwise = return $ fmap Symbol (ts, t)
     genClosure k (args, (_:ts)) = fmap (Closure k args) <$> gen ts
     genInvoke k ts = let Closure _ args _ = snd env ! k in fmap (Invoke k) <$> foldl f (return (ts, [])) args
     f acc _ = acc >>= \ (ts, asts) -> fmap ((asts <>) . return) <$> gen ts
+
+checkAst :: Ast -> Either String Ast
+checkAst (Closure k args exp)
+   | checkExpr args exp && checkArgs args = return (Closure k args exp)
+   | otherwise = ukno_err
+  where
+    checkExpr args (Symbol s) = elem s args
+    checkExpr args (Invoke k asts) = all (checkExpr args) asts
+    checkExpr _ _ = True
+    checkArgs args = length args == (Set.size $ Set.fromList args)
+checkAst ast = return ast
 
 interp :: Interpreter -> Ast -> Either String (Result, Interpreter)
 interp env (Void) = return (Nothing, env)
@@ -101,18 +116,18 @@ extEnv [] [] = id
 fmapL :: (a -> b) -> ((,) a) t -> ((,) b) t
 fmapL f (x, y) = (f x, y)
 
---instance MaybeT [] where
---  xs >>? y = \ _ -> y
---  xs >>=? f = \ _ -> f x
---  f >>! x = f x
+instance MaybeT [] where
+  xs >>? y = \ _ -> y
+  xs >>=? f = \ _ -> f x
+  f >>! x = f x
 
---Three Unit Operator of Maybe Monad Transformer
---  (Φ a) >>? (Ψ a)_1 >>! (Ψ a)_2 <=> case (Φ a) of Just _ -> (Ψ a)_1; Nothing -> (Ψ a)_2
---         (Φ a) >>=? f >>! (Ψ a) <=> case (Φ a) of Just x -> f x; Nothing -> (Ψ a)
---                      (f >>! a) <=> (f =<< return a)
---
---type Φ = Maybe
---type Ψ = Either e
---Γ :: Φ a -> Ψ a -> Ψ a
---Γ (Just a) = \ (Right x) -> Right
---(Ψ f) <*> Γ :: Φ a -> Ψ b
+Three Unit Operator of Maybe Monad Transformer
+  (Φ a) >>? (Ψ a)_1 >>! (Ψ a)_2 <=> case (Φ a) of Just _ -> (Ψ a)_1; Nothing -> (Ψ a)_2
+         (Φ a) >>=? f >>! (Ψ a) <=> case (Φ a) of Just x -> f x; Nothing -> (Ψ a)
+                      (f >>! a) <=> (f =<< return a)
+
+type Φ = Maybe
+type Ψ = Either e
+Γ :: Φ a -> Ψ a -> Ψ a
+Γ (Just a) = \ (Right x) -> Right
+(Ψ f) <*> Γ :: Φ a -> Ψ b
