@@ -230,15 +230,11 @@ public class Interpreter {
     if (input.trim().isEmpty()) return null;
     Deque<String> polish = parsing(tokenize(input));
     Ast ast = polish.peek().equals("fn") ? closure(polish) : getAst(polish);
-
-    System.out.print(input + " >>= " + ast + " >>= ");
+    System.out.println(input + " >>= " + ast);
     if (!polish.isEmpty()) {
-      System.out.println();
       throw new IllegalArgumentException("Mismatch expression");
     } else {
-      Double result = calcIter(ast);
-      System.out.println(result);
-      return result;
+      return calcIter(ast);
     }
   }
 
