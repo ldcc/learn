@@ -116,18 +116,17 @@ extEnv [] [] = id
 fmapL :: (a -> b) -> ((,) a) t -> ((,) b) t
 fmapL f (x, y) = (f x, y)
 
---instance MaybeT [] where
---  xs >>? y = \ _ -> y
---  xs >>=? f = \ _ -> f x
---  f >>! x = return x >>= f
+--class Monad m => MonadT m where
+--  (-?) :: Monad n => m a -> n b -> n b -> n b
+--  (\?) :: Monad n => m a -> (a -> n b) -> n b -> n b
+--  (-:) :: (a -> m b) -> a -> m b
 --
---Three Unit Operator of Maybe Monad Transformer
---  (Φ a) >>? (Ψ a)_1 >>! (Ψ a)_2 <=> case (Φ a) of Just _ -> (Ψ a)_1; Nothing -> (Ψ a)_2
---         (Φ a) >>=? f >>! (Ψ a) <=> case (Φ a) of Just x -> f x; Nothing -> (Ψ a)
---                      (f >>! a) <=> (return a >>= f)
+----Three Unit Operator of Maybe Monad Transformer
+--(Φ a) -? (Ψ a)_1 -: (Ψ a)_2 <=> case (Φ a) of Just _ -> (Ψ a)_1; Nothing -> (Ψ a)_2
+--       (Φ a) \? f -: (Ψ a) <=> case (Φ a) of Just x -> f x; Nothing -> (Ψ a)
+--                    (f -: a) <=> (return a >>= f)
 --
 --type Φ = Maybe
 --type Ψ = Either e
---Γ :: Φ a -> Ψ a -> Ψ a
---Γ (Just a) = \ (Right x) -> Right
+--Γ :: Φ a -> Ψ b -> Ψ b
 --(Ψ f) <*> Γ :: Φ a -> Ψ b
