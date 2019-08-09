@@ -75,3 +75,6 @@
  '((define c 20)
    (define a 10)
    ((λ (x y o) (o x y)) a c +)))
+
+(r3
+ '((+ 1 1)))

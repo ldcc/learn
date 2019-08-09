@@ -10,4 +10,7 @@ Cargo.lock
 ### Hakell
 .stack-work/
 *.cabal
+stack.yaml.lock
+
+### Scheme, Racket, Emacs
 *\~
