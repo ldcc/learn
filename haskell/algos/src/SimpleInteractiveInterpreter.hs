@@ -119,8 +119,16 @@ fmapL f (x, y) = (f x, y)
 --class Monad m => MonadT m where
 --  (-?) :: Monad n => m a -> n b -> n b -> n b
 --  (\?) :: Monad n => m a -> (a -> n b) -> n b -> n b
---  (-:) :: (a -> m b) -> a -> m b
 --
+--instance MonadT Maybe where
+--  Nothing -? _ = id
+--  _ -? y = \ _ -> y
+--  Nothing \? _ = id
+--  (Just x) \? f = \ _ -> f x
+--
+--(-:) :: Monad m => (a -> m b) -> a -> m b
+--f -: x = return x >>= f
+
 --type Φ = Maybe
 --type Ψ = Either e
 --Γ :: Φ a -> Ψ b -> Ψ b
