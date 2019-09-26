@@ -88,6 +88,8 @@ checkAst (Closure k args exp)
     checkArgs args = length args == (Set.size $ Set.fromList args)
 checkAst ast = return ast
 
+--------------------------- interp ---------------------------
+
 interp :: Interpreter -> Ast -> Either String (Result, Interpreter)
 interp env (Void) = return (Nothing, env)
 interp env (Const v) = return (return v, env)
