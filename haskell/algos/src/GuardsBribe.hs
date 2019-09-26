@@ -42,17 +42,11 @@ findFP xs
   where
     findfp l r xs
       | length xs < 2 = 1 + length xs
-      | v1 == v3 && v4 < v1 && v3 < v2 = 1 + findfp (l ++ l1) r tl
-      | v2 == v4 && v4 < v1 && v3 < v2 = findfp l (r1 ++ r) tr
-      | v1 < v3 = 1 + findfp (l ++ l1) r tl
+      | genTrie r < genTrie l = 1 + findfp (l ++ l1) r tl
       | otherwise = findfp l (r1 ++ r) tr
       where
         (l1, tl) = splitAt 1 xs
         (tr, r1) = splitAt (length xs - 1) xs
-        v1 = genTrie l
-        v2 = genTrie (l ++ l1)
-        v3 = genTrie r
-        v4 = genTrie (r1 ++ r)
 
 -- determine the minimum amount in the worst case
 bribe :: Trie -> Int
