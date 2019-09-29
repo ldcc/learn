@@ -1,7 +1,7 @@
 module PeteBake where
 
 import Data.Maybe (fromMaybe)
-import Data.Map (Map, fromList, (!?))
+import Data.Map (fromList, (!?))
 
 type Ingredient = String
 type Amount     = Int
