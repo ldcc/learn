@@ -68,13 +68,15 @@
       (cond
         [(equal? exp '(exit)) "exit"]
         [else
-         (printf "REPL ⇒ ~a~n" (r3 exp))
+         (printf "REPL ⇒ ~a~n" (r3 `(,exp)))
          (repl)]))))
 
-(r3
- '((define c 20)
-   (define a 10)
-   ((λ (x y o) (o x y)) a c +)))
+;(r3
+; '((define c 20)
+;   (define a 10)
+;   ((λ (x y o) (o x y)) a c +)))
+;
+;(r3
+; '((+ 1 1)))
 
-(r3
- '((+ 1 1)))
+(repl)
