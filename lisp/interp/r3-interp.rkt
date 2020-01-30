@@ -61,15 +61,15 @@
   (λ (exp)
     (interp `(begin ,@exp) denv)))
 
-(define repl 
-  (λ ()
-    (display "REPL ⇒ ")
-    (let ([exp (read)])
-      (cond
-        [(equal? exp '(exit)) "exit"]
-        [else
-         (printf "REPL ⇒ ~a~n" (r3 `(,exp)))
-         (repl)]))))
+(define (repl)
+  (define cc '())
+  (call/cc (λ (k) (set! cc k)))
+  (printf "REPL ⇒ ")
+  (let ([exp (read)])
+    (cond
+      [(equal? exp '(exit)) 'exit]
+      [else
+       (cc (displayln (r3 `(,exp))))])))
 
 ;(r3
 ; '((define c 20)
