@@ -1,4 +1,4 @@
-package com.ldstorm.applet;
+package chats;
 
 import java.util.HashSet;
 import java.util.Set;

@@ -1,4 +1,4 @@
-package com.ldstorm.applet;
+package chats;
 
 import java.io.IOException;
 import java.net.Socket;

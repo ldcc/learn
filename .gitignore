@@ -1,3 +1,4 @@
+### Jetbrains
 .idea/
 out/
 asterisk/
@@ -14,3 +15,11 @@ stack.yaml.lock
 
 ### Scheme, Racket, Emacs
 *\~
+
+### Python
+__pycache__/
+venv/
+
+### C, C++, Java
+*.o
+*.class

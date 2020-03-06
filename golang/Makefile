@@ -1,3 +1,9 @@
+learn:
+	go build -o bin/quest/quest github.com/ldcc/quest/example
+
+http-router:
+	go build -o bin/http/http github.com/ldcc/httprouter/example
+
 rpc: clean-rpc rpc-client rpc-server
 
 rpc-client:
