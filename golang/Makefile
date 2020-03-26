@@ -1,4 +1,7 @@
-learn:
+tcpsrv:
+	go build -o bin/tcpsrv/tcpsrv github.com/ldcc/tcpsrv/example
+
+quest:
 	go build -o bin/quest/quest github.com/ldcc/quest/example
 
 http-router:
