@@ -34,8 +34,6 @@ func Handle(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	for {
 		// ReadString 会一直阻塞直到遇到分隔符 '\n'
-		// 遇到分隔符后会返回上次遇到分隔符或连接建立后收到的所有数据, 包括分隔符本身
-		// 若在遇到分隔符之前遇到异常, ReadString 会返回已收到的数据和错误信息
 		msg, err := reader.ReadString('\n')
 		if err != nil {
 			// 通常遇到的错误是连接中断或被关闭，用io.EOF表示
