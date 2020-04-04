@@ -1,5 +1,7 @@
 package main
 
+import "github.com/ldcc/quest"
+
 func main() {
-	TypeTest2()
+	quest.CatchTest2()
 }
