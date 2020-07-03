@@ -1,7 +1,16 @@
 module Main where
 
-import PeteBake
+
+import RegExpParser
 
 main :: IO ()
 main = do
-  putStrLn . show $ cakes [("flour",500), ("sugar",200), ("eggs",1)] [("flour",1200), ("sugar",1200), ("eggs",5), ("milk",200)]
+  putStrLn . show $ parseRegExp ""
+  putStrLn . show $ parseRegExp "ab*"
+  putStrLn . show $ parseRegExp "(ab)*"
+  putStrLn . show $ parseRegExp "ab|a"
+  putStrLn . show $ parseRegExp "a(b|a)"
+  putStrLn . show $ parseRegExp "a|b*"
+  putStrLn . show $ parseRegExp "(a|b)*"
+  putStrLn . show $ parseRegExp "((aa)|ab)*|a"
+  putStrLn . show $ parseRegExp "((a.)|.b)*|a"
