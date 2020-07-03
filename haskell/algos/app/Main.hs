@@ -4,5 +4,4 @@ import RegExpParser
 
 main :: IO ()
 main = do
-  putStrLn . show $ pickExp 0 "*"
-  putStrLn . show $ parseRegExp "*"
+  putStrLn . show $ parseRegExp "|*"

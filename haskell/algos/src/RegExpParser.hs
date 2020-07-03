@@ -1,7 +1,5 @@
 module RegExpParser where
 
---  TODO >>= -> <$> | <*>
-
 data RegExp = Normal Char       -- ^ A character that is not in "()*|."
             | Any               -- ^ Any charater -> `.`
             | ZeroOrMore RegExp -- ^ Zero or more occurances of the same regexp -> `*`
@@ -21,14 +19,15 @@ parsing [] = Just None
 parsing ['.'] = Just Any
 parsing ['*'] = Just $ ZeroOrMore None
 parsing [char] = Just $ Normal char
-parsing (t:ts) = ret >>= \ (r, l) -> match <$> parseRegExp l <*> parsing r
+parsing (t:ts) = ret >>= \ (r, l) -> match <$> parseRegExp l <*> parsing r >>= id
   where ret | t == '(' = pickExp 0 (t:ts)
             | otherwise = Just (ts, [t])
 
-match e1 None = e1
-match e1 (Str exps) = Str $ e1 : exps
-match e1 (ZeroOrMore None) = ZeroOrMore e1
-match e1 e2 = Str [e1, e2]
+match e1 None = Just e1
+match e1 (Str exps) = Just . Str $ e1 : exps
+match (ZeroOrMore None) _ = Nothing
+match e1 (ZeroOrMore None) = Just $ ZeroOrMore e1
+match e1 e2 = Just $ Str [e1, e2]
 
 splitExp :: Int -> String -> Maybe (String, String)
 splitExp 0 ('|':ts) = Just (ts, [])
