@@ -1,48 +1,52 @@
 module RegExpParser where
 
-import Data.Maybe (isJust, fromJust)
+--  TODO >>= -> <$> | <*>
 
 data RegExp = Normal Char       -- ^ A character that is not in "()*|."
             | Any               -- ^ Any charater -> `.`
             | ZeroOrMore RegExp -- ^ Zero or more occurances of the same regexp -> `*`
             | Or RegExp RegExp  -- ^ A choice between 2 regexps -> `|`
             | Str [RegExp]      -- ^ A sequence of regexps.
+            | None
             deriving (Show, Eq)
 
 parseRegExp :: String -> Maybe RegExp
 parseRegExp [] = Nothing
-parseRegExp token = case r of
+parseRegExp token = splitExp 0 token >>= \ (r, l) -> case r of
   [] -> parsing l
-  _ -> Just $ Or (fromJust $ parseRegExp l) (fromJust $ parseRegExp r)
-  where (r, l) = splitExp 0 token
+  _ -> Or <$> parseRegExp l <*> parseRegExp r
 
 parsing :: String -> Maybe RegExp
+parsing [] = Just None
 parsing ['.'] = Just Any
+parsing ['*'] = Just $ ZeroOrMore None
 parsing [char] = Just $ Normal char
-parsing ('(':ts) = let (tl, par) = pickExp 0 ('(':ts) in case tl of
-  [] -> parseRegExp par
-  ('*':tl0) -> case tl0 of
-    [] -> parseRegExp par >>= Just . ZeroOrMore
-    _ -> Just $ Str [ZeroOrMore . fromJust $ parseRegExp par, fromJust $ parseRegExp tl0]
-parsing ts = Just . Str . reverse $ foldl gen [] ts
-  where gen (e:exps) '*' = ZeroOrMore e : exps
-        gen exps '.' = Any : exps
-        gen exps t = Normal t : exps
+parsing (t:ts) = ret >>= \ (r, l) -> match <$> parseRegExp l <*> parsing r
+  where ret | t == '(' = pickExp 0 (t:ts)
+            | otherwise = Just (ts, [t])
 
+match e1 None = e1
+match e1 (Str exps) = Str $ e1 : exps
+match e1 (ZeroOrMore None) = ZeroOrMore e1
+match e1 e2 = Str [e1, e2]
 
--- splitExp :: Int -> String -> (String, String)
-splitExp 0 ('|':ts) = (ts, [])
-splitExp p (s:ts0) = splitExp newp ts0 >>= (,) [] . (s:)
+splitExp :: Int -> String -> Maybe (String, String)
+splitExp 0 ('|':ts) = Just (ts, [])
+splitExp 0 [] = Just ([], [])
+splitExp (-1) _ = Nothing
+splitExp _ [] = Nothing
+splitExp p (s:ts) = fmap (s:) <$> splitExp newp ts
   where newp | s == '(' = p+1
              | s == ')' = p-1
              | otherwise = p
-splitExp 0 _ = ([], [])
 
--- pickExp :: Int -> String -> (String, String)
+pickExp :: Int -> String -> Maybe (String, String)
 pickExp 0 ('(':ts) = pickExp 1 ts
-pickExp 1 (')':ts) = (ts, [])
-pickExp 0 ts = (ts, [])
-pickExp p (s:ts0) = pickExp newp ts0 >>= (,) [] . (s:)
+pickExp 1 (')':ts) = Just (ts, [])
+pickExp 0 [] = Just ([], [])
+pickExp (-1) _ = Nothing
+pickExp _ [] = Nothing
+pickExp p (s:ts) = fmap (s:) <$> pickExp newp ts
   where newp | s == '(' = p+1
              | s == ')' = p-1
              | otherwise = p
