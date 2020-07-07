@@ -1,4 +1,4 @@
-module Interp.RegExpParserSpec where
+module Interp.RegExpParserSpec (spec) where
 
 import RegExpParser
 import Test.Hspec
