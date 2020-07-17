@@ -36,7 +36,7 @@ twoGliders = [[[1,1,1,0,0,0,1,0],
 
 fPentomino = [[0, 1, 0], [0, 1, 1], [1, 1, 0]]
 
-main = hspec spec
+spec :: Spec
 spec = do
   describe ("Glider\n" ++ htmlize (gliders !! 0)) $ do
     it "Glider 0" $ do
