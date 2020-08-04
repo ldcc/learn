@@ -1,39 +1,39 @@
 module Main where
 
-import UnlimitedGameOfLife
+import SimpleSQLEngine
 
-glider0 = [[1,2,3],
-           [4,5,6],
-           [7,8,9]]
-
-matrix = [[1,1,1],
-          [1,1,1],
-          [1,1,1]]
-
-glider = [[1,0,0],
-          [0,1,1],
-          [1,1,0]]
-
-gliders = [[[1,0,0],
-            [0,1,1],
-            [1,1,0]],
-           [[0,1,0],
-            [0,0,1],
-            [1,1,1]],
-           [[1,0,1],
-            [0,1,1],
-            [0,1,0]],
-           [[0,0,1],
-            [1,0,1],
-            [0,1,1]]
-          ]
-
+movieDatabase = [ ( "movie"
+                  , [ [ ( "id", "1" ), ( "name", "Avatar"   ), ( "directorID", "1" ) ]
+                    , [ ( "id", "2" ), ( "name", "Titanic"  ), ( "directorID", "1" ) ]
+                    , [ ( "id", "3" ), ( "name", "Infamous" ), ( "directorID", "2" ) ]
+                    , [ ( "id", "4" ), ( "name", "Skyfall"  ), ( "directorID", "3" ) ]
+                    , [ ( "id", "5" ), ( "name", "Aliens"   ), ( "directorID", "1" ) ]
+                    ]
+                  )
+                , ( "actor"
+                  , [ [ ( "id", "1" ), ( "name", "Leonardo DiCaprio" ) ]
+                    , [ ( "id", "2" ), ( "name", "Sigourney Weaver"  ) ]
+                    , [ ( "id", "3" ), ( "name", "Daniel Craig"      ) ]
+                    ]
+                  )
+                , ( "director"
+                  , [ [ ( "id", "1" ), ( "name", "James Cameron"   ) ]
+                    , [ ( "id", "2" ), ( "name", "Douglas McGrath" ) ]
+                    , [ ( "id", "3" ), ( "name", "Sam Mendes"      ) ]
+                    ]
+                  )
+                , ( "actor_to_movie"
+                  , [ [ ( "movieID", "1" ), ( "actorID", "2" ) ]
+                    , [ ( "movieID", "2" ), ( "actorID", "1" ) ]
+                    , [ ( "movieID", "3" ), ( "actorID", "2" ) ]
+                    , [ ( "movieID", "3" ), ( "actorID", "3" ) ]
+                    , [ ( "movieID", "4" ), ( "actorID", "3" ) ]
+                    , [ ( "movieID", "5" ), ( "actorID", "2" ) ]
+                    ]
+                  )
+                ]
 
 main :: IO ()
 main = do
-  putStrLn . show $ getGeneration glider 0
-  putStrLn . show $ getGeneration glider 1
-  putStrLn . show $ getGeneration glider 2
-  putStrLn . show $ getGeneration glider 3
+  putStrLn . show . sqlEngine movieDatabase $ ""
 
-[[0,1,0],[0,0,1],[1,1,1]]
