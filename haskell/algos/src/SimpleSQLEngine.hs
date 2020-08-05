@@ -19,25 +19,34 @@ type Database = [Table]
 type Table = (String, [Dbo])
 type Dbo = [(String, String)]
 
-data Query = Select Ws From Ws Join Ws Where
-data Select = Select Ws Columns
-data Columns = Column Ws String | Column Ws String Ws String Ws Columns
-data From = From Ws String | From Ws String Ws Join
-data Join  = Join String VTest
-data VTest = Eq Value Value
-           | Gt Value Value
-           | Ge Value Value
-           | Lt Value Value
-           | Le Value Value
-           | Ne Value Value
-data Value = Column String | Number String | Quoted String
-data Ws = Empty | Space | Newline | Ws Ws deriving (Show, Read)
+type Query = ([String], String, Join, Where) -- ([column-id], table-name, Join, Where)
+type Join = Maybe (String, [Vtest])            -- (table-name, value-test)
+type Where = Maybe [Vtest]
+type Vtest = Compare -> Value -> Value -> [Table]
+
+-- vtest :: [Table] -> Compare -> Value -> Value -> [Table]
+
+data Compare = Eq | Gt | Ge | Lt | Le | Ne deriving (Show, Read)
+data Value = Number Int
+           | Quoted String
+           | Column String deriving (Show, Read) -- table-name, ".", column-name
+
 
 sqlEngine :: Database -> String -> [Dbo]
 sqlEngine database = execute
+  where
+    execute :: String -> [Dbo]
+    execute query = undefined
+--     lt :: Compare
+--     le :: Compare
+--     gt :: Compare
+--     ge :: Compare
+--     eq :: Compare
+--     ne :: Compare
 
-execute :: String -> [Dbo]
-execute query = undefined
+
+
+
 
 -- isTest ::
 -- isComparison :: String -> Bool
