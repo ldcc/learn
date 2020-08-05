@@ -19,14 +19,17 @@ type Database = [Table]
 type Table = (String, [Dbo])
 type Dbo = [(String, String)]
 
-data SQL = Query [SQL] String SQL SQL  -- [Column] From Join Where
-         | Join String [SQL]           -- [Vtest]
-         | Where [SQL]                 -- [Vtest]
-         | Vtest Compare SQL SQL       -- Value Value
-         | Number Int                  -- readMaybe t :: Maybe Int
-         | Quoted String
-         | Column String String        -- TableName ColumnName
-         | Void deriving (Show, Read)
+data SQL = Query SQL String SQL SQL  -- [Column] From Join Where
+         | Select [Value]
+         | Join String [Vtest]
+         | Where [Vtest]
+         | Void
+         deriving (Show, Read)
+data Vtest = Vtest Compare Value Value deriving (Show, Read)
+data Value = Number Int              -- readMaybe t :: Maybe Int
+           | Quoted String
+           | Column String String    -- TableName ColumnName
+           deriving (Show, Read)
 data Compare = Eq | Gt | Ge | Lt | Le | Ne deriving (Show, Read)
 
 
