@@ -19,17 +19,15 @@ type Database = [Table]
 type Table = (String, [Dbo])
 type Dbo = [(String, String)]
 
-type Query = ([String], String, Join, Where) -- ([column-id], table-name, Join, Where)
-type Join = Maybe (String, [Vtest])            -- (table-name, value-test)
-type Where = Maybe [Vtest]
-type Vtest = Compare -> Value -> Value -> [Table]
-
--- vtest :: [Table] -> Compare -> Value -> Value -> [Table]
-
+data SQL = Query [SQL] String SQL SQL  -- [Column] From Join Where
+         | Join String [SQL]           -- [Vtest]
+         | Where [SQL]                 -- [Vtest]
+         | Vtest Compare SQL SQL       -- Value Value
+         | Number Int                  -- readMaybe t :: Maybe Int
+         | Quoted String
+         | Column String String        -- TableName ColumnName
+         | Void deriving (Show, Read)
 data Compare = Eq | Gt | Ge | Lt | Le | Ne deriving (Show, Read)
-data Value = Number Int
-           | Quoted String
-           | Column String deriving (Show, Read) -- table-name, ".", column-name
 
 
 sqlEngine :: Database -> String -> [Dbo]
@@ -44,7 +42,7 @@ sqlEngine database = execute
 --     eq :: Compare
 --     ne :: Compare
 
-
+-- parse :: String -> SQL
 
 
 

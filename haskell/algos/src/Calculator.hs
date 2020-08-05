@@ -1,8 +1,5 @@
 module Calculator where
 
-import Text.Read (readMaybe)
-import Data.Maybe (isJust)
-
 data Ast = Proc Arith Ast Ast | V Double deriving (Show, Read)
 data Arith = Plus | Minus | Times | Divide deriving (Show, Read)
 
