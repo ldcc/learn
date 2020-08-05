@@ -14,9 +14,9 @@ import Data.Char (isAlpha, isSpace, isSeparator, toUpper)
 
 generateHashtag :: String -> Maybe String
 generateHashtag str = if length str > 140 then Nothing else generate $ trim str
-  where generate str = str >>= return . concatMap (\ (x:xs) -> toUpper x:xs) . words >>= return . (\s -> '#':s)
+  where generate =(('#':) <$> concatMap (\ (x:xs) -> toUpper x:xs) . words <$>)
 
 trim :: String -> Maybe String
-trim = p . t . t . filter (\x -> or $ map ($ x) [isAlpha, isSpace]) where
+trim = p . t . t . filter ((||) <$> isAlpha <*> isSpace) where
   t = reverse . dropWhile isSpace
-  p = (\x -> if x == [] then Nothing else Just x)
+  p x = if x == [] then Nothing else Just x
