@@ -10,13 +10,9 @@
 
 module Hashtag where
 
-import Data.Char (isAlpha, isSpace, isSeparator, toUpper)
+import Data.Char (toUpper)
 
 generateHashtag :: String -> Maybe String
-generateHashtag str = if length str > 140 then Nothing else generate $ trim str
-  where generate =(('#':) <$> concatMap (\ (x:xs) -> toUpper x:xs) . words <$>)
-
-trim :: String -> Maybe String
-trim = p . t . t . filter ((||) <$> isAlpha <*> isSpace) where
-  t = reverse . dropWhile isSpace
-  p x = if x == [] then Nothing else Just x
+generateHashtag s = let w = words s in
+  if length s > 140 || w == [] then Nothing
+  else Just . ('#':) $ concatMap (\ (x:xs) -> toUpper x:xs) w
