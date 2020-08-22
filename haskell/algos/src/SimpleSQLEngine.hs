@@ -5,26 +5,30 @@
 -- where         =  "WHERE ", value-test ;
 -- value-test    =  value, comparison, value;
 
--- table-name    = ? a valid SQL table name ? ;
--- column-name   = ? a valid SQL column name ? ;
+-- table-name    = ? a valid Sql table name ? ;
+-- column-name   = ? a valid Sql column name ? ;
 
 -- column-id     =  table-name, ".", column-name ;
--- value         =  column-id | ? a number ? | ? a SQL single-quoted string ? ;
+-- value         =  column-id | ? a number ? | ? a Sql single-quoted string ? ;
 -- comparison    =  " = " | " > " | " < " | " <= " | " >= " | " <> " ;
 -- ws            = " " | "\n" | ws, ws ;
 
 module SimpleSQLEngine where
 
+import Data.Char (toLower)
+import qualified Data.Text as T (pack, unpack, strip)
+
 type Database = [Table]
 type Table = (String, [Dbo])
 type Dbo = [(String, String)]
 
-data SQL = Query SQL String SQL SQL  -- [Column] From Join Where
-         | Select [Value]
+data Sql = Select [Value] Sql Sql
+         | From String [Join]
          | Join String [Vtest]
          | Where [Vtest]
          | Void
          deriving (Show, Read)
+
 data Vtest = Vtest Compare Value Value deriving (Show, Read)
 data Value = Number Int              -- readMaybe t :: Maybe Int
            | Quoted String
@@ -45,8 +49,28 @@ sqlEngine database = execute
 --     eq :: Compare
 --     ne :: Compare
 
--- parse :: String -> SQL
+-- parse :: String -> Sql
+parse = parsing . words . T.unpack . T.strip . T.pack . fst . seps . map C.toLower
+  where
+    sep = \x -> (>>= \f -> if f x then (' ':[x], not . f) else ([x], f))
+    seps = foldl (flip sep) ([], flip elem syms)
 
+parsing sql0 =
+  where
+    preds = dropWhile (/= "where") sql0
+--   [sql1] ->
+--   [sql1, pred] -> []
+--   w@_ -> w
+--
+--   _ -> Select []
+
+-- parsing :: Text -> Sql
+-- parsing sql0 = sql0
+--   where
+--     [sql1, pred] = splitOn (pack "where") sql0
+--     [sql2, ]
+
+match preds@("select":_) = Just $ Vtest Eq Value Value
 
 
 -- isTest ::
@@ -56,4 +80,5 @@ sqlEngine database = execute
 -- isNumber :: String -> Bool -- readMaybe
 -- isQuoted :: String -> Bool
 
-
+symbols = [",", "=", ">", "<", "<=", ">=", "<>"]
+syms = ",=<>"

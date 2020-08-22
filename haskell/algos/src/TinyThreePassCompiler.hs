@@ -20,9 +20,9 @@ pass1 prog = fst . generates $ parsing [] [] $ reverse tokens
   where
     (tokens, params) = fmap words $ split prog
     split ('[':ts) = split ts
-    split (']':ts) = (words $ seperates ts, [])
+    split (']':ts) = (words $ separates ts, [])
     split (t:ts) = let (nts, nt) = split ts in (nts, t:nt)
-    seperates = foldl (\ acc c -> acc ++ if elem c "+-*/()" then [' ', c, ' '] else [c]) []
+    separates = foldl (\ acc c -> acc ++ if elem c "+-*/()" then [' ', c, ' '] else [c]) []
     parsing stack1 stack2 [] = merging stack1 stack2 [] $ \_ -> True
     parsing stack1 stack2 (t:ts)
       | t == ")" = parsing (t:stack1) stack2 ts

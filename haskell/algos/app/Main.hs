@@ -35,5 +35,8 @@ movieDatabase = [ ( "movie"
 
 main :: IO ()
 main = do
-  putStrLn . show . sqlEngine movieDatabase $ ""
+--   putStrLn . show $ parse "select movie.name, movie.id from movie"
+  putStrLn . show $ parse "SELECT movie.name FROM movie WHERE movie.directorID = '1'"
+--   putStrLn . show $ parse "Select movie.name From movie Join director On director.id = movie.directorID"
+--   putStrLn . show . sqlEngine movie Database $ ""
 
