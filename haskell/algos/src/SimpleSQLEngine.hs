@@ -24,17 +24,23 @@ type Dbo = [(String, String)]
 
 data Sql = Select [Value] Sql Sql
          | From String [Join]
-         | Join String [Vtest]
-         | Where [Vtest]
+         | Join String Vtest
+         | Where Vtest
          | Void
          deriving (Show, Read)
 
-data Vtest = Vtest Compare Value Value deriving (Show, Read)
-data Value = Number Int              -- readMaybe t :: Maybe Int
+data Vtest = Eq Vtest Vtest
+           | Ne Vtest Vtest
+           | Gt Vtest Vtest
+           | Ge Vtest Vtest
+           | Lt Vtest Vtest
+           | Le Vtest Vtest
+           | Or Vtest Vtest
+           | And Vtest Vtest
+           | Number Int              -- readMaybe t :: Maybe Int
            | Quoted String
            | Column String String    -- TableName ColumnName
            deriving (Show, Read)
-data Compare = Eq | Gt | Ge | Lt | Le | Ne deriving (Show, Read)
 
 
 sqlEngine :: Database -> String -> [Dbo]
@@ -70,7 +76,8 @@ parsing sql0 =
 --     [sql1, pred] = splitOn (pack "where") sql0
 --     [sql2, ]
 
-match preds@("select":_) = Just $ Vtest Eq Value Value
+match :: String -> Sql
+match preds@("select":_) = Where Vtest Eq Value Value
 
 
 -- isTest ::
