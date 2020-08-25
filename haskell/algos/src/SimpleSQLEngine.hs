@@ -16,31 +16,32 @@
 module SimpleSQLEngine where
 
 import Data.Char (toLower)
-import qualified Data.Text as T (pack, unpack, strip)
+import Data.Text (pack, unpack, strip)
+import Data.Maybe (isJust)
+import Text.Read (readMaybe)
 
 type Database = [Table]
 type Table = (String, [Dbo])
 type Dbo = [(String, String)]
 
-data Sql = Select [Value] Sql Sql
-         | From String [Join]
-         | Join String Vtest
-         | Where Vtest
+data Sql = Query Sql Sql Sql    -- Select From Where
+         | Select [Sql]         -- Select [Column]
+         | From String [Sql]    -- From `tb-name` [Join]
+         | Join String Sql      -- Join `tb-name` Test
+         | Where Sql            -- Where Test
          | Void
+         | Eq Sql Sql
+         | Ne Sql Sql
+         | Gt Sql Sql
+         | Ge Sql Sql
+         | Lt Sql Sql
+         | Le Sql Sql
+         | Or Sql Sql
+         | And Sql Sql
+         | Number Int
+         | Quoted String
+         | Column String String -- `tb-name` `col-name`
          deriving (Show, Read)
-
-data Vtest = Eq Vtest Vtest
-           | Ne Vtest Vtest
-           | Gt Vtest Vtest
-           | Ge Vtest Vtest
-           | Lt Vtest Vtest
-           | Le Vtest Vtest
-           | Or Vtest Vtest
-           | And Vtest Vtest
-           | Number Int              -- readMaybe t :: Maybe Int
-           | Quoted String
-           | Column String String    -- TableName ColumnName
-           deriving (Show, Read)
 
 
 sqlEngine :: Database -> String -> [Dbo]
@@ -48,44 +49,52 @@ sqlEngine database = execute
   where
     execute :: String -> [Dbo]
     execute query = undefined
---     lt :: Compare
---     le :: Compare
---     gt :: Compare
---     ge :: Compare
---     eq :: Compare
---     ne :: Compare
 
+-- fixme `words` like 'Daniel Craig'
 -- parse :: String -> Sql
-parse = parsing . words . T.unpack . T.strip . T.pack . fst . seps . map C.toLower
+parse = parsing . words . unpack . strip . pack . fst . seps . map toLower
   where
     sep = \x -> (>>= \f -> if f x then (' ':[x], not . f) else ([x], f))
-    seps = foldl (flip sep) ([], flip elem syms)
+    seps = foldl (flip sep) ([], flip elem ",=<>")
 
-parsing sql0 =
+parsing :: [String] -> Sql
+parsing sql0 = Query (match select) (match from) (match pred)
   where
-    preds = dropWhile (/= "where") sql0
---   [sql1] ->
---   [sql1, pred] -> []
---   w@_ -> w
---
---   _ -> Select []
+    (sql1, pred) = split "where" sql0
+    (select, from) = split "from" sql1
 
--- parsing :: Text -> Sql
--- parsing sql0 = sql0
---   where
---     [sql1, pred] = splitOn (pack "where") sql0
---     [sql2, ]
+match :: [String] -> Sql
+match ("select":sql) = Select $ map parset $ foldr (group ",") [[]] sql
+match ("from":tb:sql) = From tb $ map match . tail $ foldr (group "join") [[]] sql
+match ("join":tb:_:sql) = Join tb $ parset sql
+match ("where":sql) = Where $ parset sql
+match _ = Void
 
-match :: String -> Sql
-match preds@("select":_) = Where Vtest Eq Value Value
+parset :: [String] -> Sql
+parset [a,t,b]
+  | t == "=" = make Eq
+  | t == ">" = make Gt
+  | t == "<" = make Lt
+  | t == ">=" = make Ge
+  | t == "<=" = make Le
+  | t == "<>" = make Ne
+  where make op = op (parset [a]) (parset [b])
+parset [",",v] = parset [v]
+parset [v]
+  | isJust (readMaybe v :: Maybe Int) = Number $ read v
+  | elem '.' v = uncurry Column $ fmap tail $ split '.' v
+  | (&&) <$> (u . head) <*> (u . last) $ v = Quoted . tail . init $ v
+  where u = (== '\'')
 
 
--- isTest ::
--- isComparison :: String -> Bool
--- isColumn :: String -> Bool
--- isConst :: String -> Bool
--- isNumber :: String -> Bool -- readMaybe
+split :: Eq a => a -> [a] -> ([a], [a])
+split t str = (takeWhile (/= t) str, dropWhile (/= t) str)
+group :: Eq a => a -> a -> [[a]] -> [[a]]
+group k t (s:ss) = (if t == k then ([]:) else ([]++)) $ (t : s) : ss
+
 -- isQuoted :: String -> Bool
-
-symbols = [",", "=", ">", "<", "<=", ">=", "<>"]
-syms = ",=<>"
+-- isQuoted = elem '.'
+-- isNumber :: String -> Bool
+-- isNumber = isJust . readMaybe :: (String -> Maybe Int)
+-- isColumn :: String -> Bool
+-- isColumn = (&&) <$> (u . head) <*> (u . last)

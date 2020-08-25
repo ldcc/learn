@@ -30,7 +30,7 @@ parse = parsing [] []
     | elem t ["*", "/"] = parsing (t:stack1) stack2 ts
     | elem t ["+", "-"] = merging stack1 stack2 (t:ts) $ flip elem ["*", "/"]
     | otherwise = parsing stack1 (t:stack2) ts
-  merging :: [String] -> [String] -> [String] -> (Bool -> Bool) -> [String]
+  merging :: [String] -> [String] -> [String] -> (String -> Bool) -> [String]
   merging [] stack2 [] _ = stack2
   merging [] stack2 (t:ts) _ = parsing [t] stack2 ts
   merging (s:ss) stack2 tokens@(t:ts) p
