@@ -51,7 +51,7 @@ sqlEngine database = execute
     execute query = undefined
 
 -- fixme `words` like 'Daniel Craig'
--- parse :: String -> Sql
+parse :: String -> Sql
 parse = parsing . words . unpack . strip . pack . fst . seps . map toLower
   where
     sep = \x -> (>>= \f -> if f x then (' ':[x], not . f) else ([x], f))
