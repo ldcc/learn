@@ -45,7 +45,8 @@ sql = "select movie.name   \
 
 main :: IO ()
 main = do
-  putStrLn . show $ parse sql
+  putStrLn . show $ parse "select movie.name from movie"
+--   putStrLn . show $ parse sql
 --   putStrLn . show $ parse "select movie.name, movie.id from movie"
 --   putStrLn . show $ parse "SELECT movie.name FROM movie WHERE movie.directorID = '1'"
 --   putStrLn . show $ parse "Select movie.name From movie Join director On director.id = movie.directorID"

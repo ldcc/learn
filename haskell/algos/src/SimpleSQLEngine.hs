@@ -45,10 +45,33 @@ data Sql = Query Sql Sql Sql    -- Select From Where
 
 
 sqlEngine :: Database -> String -> [Dbo]
-sqlEngine database = execute . parse
+sqlEngine db0 = execute . flip eval db0 . parse
   where
-    execute :: Sql -> [Dbo]
-    execute query = undefined
+    execute :: Database -> [Dbo]
+    execute db = undefined -- make `cartesian product`
+
+eval :: Sql -> Database -> Database
+eval (Query s f w) db = eval s . eval w . eval f $ db
+eval (Select cols) db = undefined
+eval (From tb joins) db = case lookup tb db of
+  Just dbos -> foldl f [(tb, dbos)] joins where
+    f acc (Join jtb test) = case lookup jtb db of
+      Just jdbos -> eval test $ (jtb, jdbos) : acc
+      Nothing -> []
+  Nothing -> []
+eval (Where test) db = undefined
+eval (Eq l r) db = undefined
+eval (Ne l r) db = undefined
+eval (Gt l r) db = undefined
+eval (Ge l r) db = undefined
+eval (Lt l r) db = undefined
+eval (Le l r) db = undefined
+eval (Or l r) db = undefined
+eval (And l r) db = undefined
+eval (Number i) db = undefined
+eval (Quoted s) db = undefined
+eval (Column tb col) db = undefined
+eval (Void) _ = []
 
 parse :: String -> Sql
 parse = parsing . wordsq . unpack . strip . pack . fst . seps . map toLower
@@ -87,7 +110,7 @@ parset [v]
 
 
 split :: Eq a => a -> [a] -> ([a], [a])
-split t str = break (==t) str
+split = break . (==)
 group :: Eq a => a -> a -> [[a]] -> [[a]]
 group k t (s:ss) = (if t == k then ([]:) else ([]++)) $ (t : s) : ss
 wordsq :: String -> [String]
