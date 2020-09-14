@@ -45,14 +45,13 @@ data Sql = Query Sql Sql Sql    -- Select From Where
 
 
 sqlEngine :: Database -> String -> [Dbo]
-sqlEngine database = undefined
+sqlEngine database = execute . parse
   where
     execute :: Sql -> [Dbo]
     execute query = undefined
 
--- fixme `words` like 'Daniel Craig'
--- parse :: String -> Sql
-parse = wordsq . unpack . strip . pack . fst . seps . map toLower
+parse :: String -> Sql
+parse = parsing . wordsq . unpack . strip . pack . fst . seps . map toLower
   where
     sep = \x -> (>>= \f -> if f x then (' ':[x], not . f) else ([x], f))
     seps = foldl (flip sep) ([], flip elem ",=<>")
