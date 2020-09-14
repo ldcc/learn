@@ -15,7 +15,7 @@
 
 module SimpleSQLEngine where
 
-import Data.Char (toLower)
+import Data.Char (toLower, isSpace)
 import Data.Text (pack, unpack, strip)
 import Data.Maybe (isJust)
 import Text.Read (readMaybe)
@@ -40,19 +40,19 @@ data Sql = Query Sql Sql Sql    -- Select From Where
          | And Sql Sql
          | Number Int
          | Quoted String
-         | Column String String -- `tb-name` `col-name`
+         | Column String String -- `tb-name`.`col-name`
          deriving (Show, Read)
 
 
 sqlEngine :: Database -> String -> [Dbo]
-sqlEngine database = execute
+sqlEngine database = undefined
   where
-    execute :: String -> [Dbo]
+    execute :: Sql -> [Dbo]
     execute query = undefined
 
 -- fixme `words` like 'Daniel Craig'
-parse :: String -> Sql
-parse = parsing . words . unpack . strip . pack . fst . seps . map toLower
+-- parse :: String -> Sql
+parse = wordsq . unpack . strip . pack . fst . seps . map toLower
   where
     sep = \x -> (>>= \f -> if f x then (' ':[x], not . f) else ([x], f))
     seps = foldl (flip sep) ([], flip elem ",=<>")
@@ -88,9 +88,24 @@ parset [v]
 
 
 split :: Eq a => a -> [a] -> ([a], [a])
-split t str = (takeWhile (/= t) str, dropWhile (/= t) str)
+split t str = break (==t) str
 group :: Eq a => a -> a -> [[a]] -> [[a]]
 group k t (s:ss) = (if t == k then ([]:) else ([]++)) $ (t : s) : ss
+wordsq :: String -> [String]
+wordsq = wordsq' 0
+wordsq' n str = case dropWhile isSpace str of
+    "" -> []
+    str' -> case newn of
+      0 -> w : nwords
+      _ -> (w ++ " " ++ head nwords) : (tail nwords)
+      where
+        (w, str'') = break isSpace str'
+        newn = case (head w, last w) of
+          ('\'', '\'') -> n
+          ('\'', _) -> n + 1
+          (_, '\'') -> n - 1
+          _ -> n
+        nwords = wordsq' newn str''
 
 -- isQuoted :: String -> Bool
 -- isQuoted = elem '.'

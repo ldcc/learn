@@ -41,7 +41,7 @@ sql = "select movie.name   \
                             \  JoIn actor\
                             \    oN actor_to_movie.actorID = actor.id\
                             \ WheRe \n\
-                            \   actor.name <> 'Daniel'"
+                            \   actor.name <> 'Daniel Craig'"
 
 main :: IO ()
 main = do
