@@ -31,13 +31,20 @@ data Sql = Query Sql Sql Sql    -- Select From Where
          | Where Sql            -- Where Test
          | Void
          | Test Cmp Sql Sql
-         | Number String
          | Quoted String
          | Column String String -- `tb-name`.`col-name`
+         deriving (Show, Read)
 
 
-type Cmp = String -> String -> Bool
--- data Cmp = Eq | Ne | Gt | Ge | Lt | Le deriving (Show, Read)
+-- type Cmp = String -> String -> Bool
+data Cmp = Eq | Ne | Gt | Ge | Lt | Le deriving (Show, Read)
+pickcmp :: Ord a => Cmp -> a -> a -> Bool
+pickcmp Eq = (==)
+pickcmp Ne = (/=)
+pickcmp Gt = (>)
+pickcmp Ge = (>=)
+pickcmp Lt = (<)
+pickcmp Le = (<=)
 
 
 sqlEngine :: Database -> String -> [Dbo]
@@ -51,7 +58,7 @@ sqlEngine db0 = execute . flip pass db0 . parse
     execute (tb1:tb2:db) = execute ((cartprod tb1 tb2) : db)
 
 pass :: Sql -> Database -> Database
-pass (Void) _ = []
+pass (Void) db = db
 pass (Query s f w) db = pass s . pass w . pass f $ db
 pass (Select cols) db = db -- FIXME undefined
 pass (From tb joins) db = case lookup tb db of
@@ -61,23 +68,19 @@ pass (From tb joins) db = case lookup tb db of
       Nothing -> []
   Nothing -> []
 pass (Where test) db = undefined
-pass (Test cmp e1 e2) db = eval e1 e2
+pass (Test _cmp e1 e2) db = eval e1 e2
   where
+    cmp = pickcmp _cmp
     filtrate col v1 = filter (\dbo -> case lookup col dbo of
       Just v2 -> v1 == v2
       Nothing -> False)
     eval :: Sql -> Sql -> Database
-    eval (Number i1) (Number i2) = if cmp i1 i2 then db else []
     eval (Quoted s1) (Quoted s2) = if cmp s1 s2 then db else []
-    eval i@(Number _) c@(Column _ _) = eval c i
-    eval (Column tb col) (Number i) = case pick tb db of
-      Just (dbos, db1) -> case filtrate col i dbos of
+    eval q@(Quoted _) c@(Column _ _) = eval c q
+    eval (Column tb col) (Quoted s) = case pick tb db of
+      Just (dbos, db1) -> case filtrate col s dbos of
         [] -> []
         tl -> (tb, tl) : db1
-      Nothing -> []
-    eval q@(Quoted _) c@(Column _ _) = eval c q
-    eval (Column tb col) (Quoted s) = case lookup tb db of
-      Just dbos -> undefined
       Nothing -> []
     eval (Column tb1 col1) (Column tb2 col2) = case lookup tb1 db of
       Just dbos1 -> case lookup tb2 db of
@@ -106,16 +109,16 @@ match _ = Void
 
 parset :: [String] -> Sql
 parset [a,t,b]
-  | t == "=" = make (==)
-  | t == "<>" = make (/=)
-  | t == ">" = make (>)
-  | t == "<" = make (<)
-  | t == ">=" = make (>=)
-  | t == "<=" = make (<=)
+  | t == "=" = make Eq
+  | t == ">" = make Gt
+  | t == "<" = make Lt
+  | t == ">=" = make Ge
+  | t == "<=" = make Le
+  | t == "<>" = make Ne
   where make op = Test op (parset [a]) (parset [b])
 parset [",",v] = parset [v]
 parset [v]
-  | isJust (readMaybe v :: Maybe Int) = Number v
+  | isJust (readMaybe v :: Maybe Int) = Quoted v
   | elem '.' v = uncurry Column $ fmap tail $ split '.' v
   | (&&) <$> (u . head) <*> (u . last) $ v = Quoted . tail . init $ v
   where u = (== '\'')

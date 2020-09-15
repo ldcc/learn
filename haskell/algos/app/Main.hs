@@ -45,7 +45,9 @@ sql = "select movie.name   \
 
 main :: IO ()
 main = do
-  putStrLn . show $ sqlEngine db0 "select movie.name from movie"
+  putStrLn . show . parse $ "select movie.name from movie"
+  putStrLn . show . flip pass db0 . parse $ "select movie.name from movie"
+  putStrLn . show . sqlEngine db0 $ "select movie.name from movie"
 --   putStrLn . show $ parse sql
 --   putStrLn . show $ parse "select movie.name, movie.id from movie"
 --   putStrLn . show $ parse "SELECT movie.name FROM movie WHERE movie.directorID = '1'"
