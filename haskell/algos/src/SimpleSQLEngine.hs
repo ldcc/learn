@@ -30,48 +30,60 @@ data Sql = Query Sql Sql Sql    -- Select From Where
          | Join String Sql      -- Join `tb-name` Test
          | Where Sql            -- Where Test
          | Void
-         | Eq Sql Sql
-         | Ne Sql Sql
-         | Gt Sql Sql
-         | Ge Sql Sql
-         | Lt Sql Sql
-         | Le Sql Sql
-         | Or Sql Sql
-         | And Sql Sql
-         | Number Int
+         | Test Cmp Sql Sql
+         | Number String
          | Quoted String
          | Column String String -- `tb-name`.`col-name`
-         deriving (Show, Read)
+
+
+type Cmp = String -> String -> Bool
+-- data Cmp = Eq | Ne | Gt | Ge | Lt | Le deriving (Show, Read)
 
 
 sqlEngine :: Database -> String -> [Dbo]
-sqlEngine db0 = execute . flip eval db0 . parse
+sqlEngine db0 = execute . flip pass db0 . parse
   where
+    cartprod :: Table -> Table -> Table
+    cartprod (tb1, dbos1) (tb2, dbos2) = ("ok", [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
     execute :: Database -> [Dbo]
-    execute db = undefined -- make `cartesian product`
+    execute [] = []
+    execute [(_,dbos)] = dbos
+    execute (tb1:tb2:db) = execute ((cartprod tb1 tb2) : db)
 
-eval :: Sql -> Database -> Database
-eval (Query s f w) db = eval s . eval w . eval f $ db
-eval (Select cols) db = undefined
-eval (From tb joins) db = case lookup tb db of
+pass :: Sql -> Database -> Database
+pass (Void) _ = []
+pass (Query s f w) db = pass s . pass w . pass f $ db
+pass (Select cols) db = db -- FIXME undefined
+pass (From tb joins) db = case lookup tb db of
   Just dbos -> foldl f [(tb, dbos)] joins where
     f acc (Join jtb test) = case lookup jtb db of
-      Just jdbos -> eval test $ (jtb, jdbos) : acc
+      Just jdbos -> pass test $ (jtb, jdbos) : acc
       Nothing -> []
   Nothing -> []
-eval (Where test) db = undefined
-eval (Eq l r) db = undefined
-eval (Ne l r) db = undefined
-eval (Gt l r) db = undefined
-eval (Ge l r) db = undefined
-eval (Lt l r) db = undefined
-eval (Le l r) db = undefined
-eval (Or l r) db = undefined
-eval (And l r) db = undefined
-eval (Number i) db = undefined
-eval (Quoted s) db = undefined
-eval (Column tb col) db = undefined
-eval (Void) _ = []
+pass (Where test) db = undefined
+pass (Test cmp e1 e2) db = eval e1 e2
+  where
+    filtrate col v1 = filter (\dbo -> case lookup col dbo of
+      Just v2 -> v1 == v2
+      Nothing -> False)
+    eval :: Sql -> Sql -> Database
+    eval (Number i1) (Number i2) = if cmp i1 i2 then db else []
+    eval (Quoted s1) (Quoted s2) = if cmp s1 s2 then db else []
+    eval i@(Number _) c@(Column _ _) = eval c i
+    eval (Column tb col) (Number i) = case pick tb db of
+      Just (dbos, db1) -> case filtrate col i dbos of
+        [] -> []
+        tl -> (tb, tl) : db1
+      Nothing -> []
+    eval q@(Quoted _) c@(Column _ _) = eval c q
+    eval (Column tb col) (Quoted s) = case lookup tb db of
+      Just dbos -> undefined
+      Nothing -> []
+    eval (Column tb1 col1) (Column tb2 col2) = case lookup tb1 db of
+      Just dbos1 -> case lookup tb2 db of
+        Just dbos2 -> undefined
+        Nothing -> []
+      Nothing -> []
 
 parse :: String -> Sql
 parse = parsing . wordsq . unpack . strip . pack . fst . seps . map toLower
@@ -94,16 +106,16 @@ match _ = Void
 
 parset :: [String] -> Sql
 parset [a,t,b]
-  | t == "=" = make Eq
-  | t == ">" = make Gt
-  | t == "<" = make Lt
-  | t == ">=" = make Ge
-  | t == "<=" = make Le
-  | t == "<>" = make Ne
-  where make op = op (parset [a]) (parset [b])
+  | t == "=" = make (==)
+  | t == "<>" = make (/=)
+  | t == ">" = make (>)
+  | t == "<" = make (<)
+  | t == ">=" = make (>=)
+  | t == "<=" = make (<=)
+  where make op = Test op (parset [a]) (parset [b])
 parset [",",v] = parset [v]
 parset [v]
-  | isJust (readMaybe v :: Maybe Int) = Number $ read v
+  | isJust (readMaybe v :: Maybe Int) = Number v
   | elem '.' v = uncurry Column $ fmap tail $ split '.' v
   | (&&) <$> (u . head) <*> (u . last) $ v = Quoted . tail . init $ v
   where u = (== '\'')
@@ -113,6 +125,11 @@ split :: Eq a => a -> [a] -> ([a], [a])
 split = break . (==)
 group :: Eq a => a -> a -> [[a]] -> [[a]]
 group k t (s:ss) = (if t == k then ([]:) else ([]++)) $ (t : s) : ss
+pick :: Eq a => a -> [(a, b)] -> Maybe (b, [(a, b)])
+pick _ [] = Nothing
+pick k (xy@(x,y) : xys)
+  | k == x = Just (y, xys)
+  | otherwise = fmap (xy:) <$> pick k xys
 wordsq :: String -> [String]
 wordsq = wordsq' 0
 wordsq' n str = case dropWhile isSpace str of
@@ -128,10 +145,3 @@ wordsq' n str = case dropWhile isSpace str of
           (_, '\'') -> n - 1
           _ -> n
         nwords = wordsq' newn str''
-
--- isQuoted :: String -> Bool
--- isQuoted = elem '.'
--- isNumber :: String -> Bool
--- isNumber = isJust . readMaybe :: (String -> Maybe Int)
--- isColumn :: String -> Bool
--- isColumn = (&&) <$> (u . head) <*> (u . last)
