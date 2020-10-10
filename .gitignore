@@ -26,3 +26,6 @@ venv/
 
 ### Golang
 pkg/
+
+### Cmake, Make, Autotool
+cmake-build-debug
