@@ -88,10 +88,18 @@ func CatchTest3() {
 			// 可以推断 panic 实际上无法污染给新创建的 env。
 			// 基于该结论，可以证实 panic 确实是非 global 的，
 			// 同时可以反推出 panic 只能在 panic 前的所有历史调用处传播。
-			rec()     // 无法捕获 panic
+			rec() // 无法捕获 panic
 			//recover() // 捕获 panic
 		}()
 		panic("panic")
 	}()
 	fmt.Println("done")
+}
+
+func CatchTest4() {
+	func() {
+		panic("panic")
+	}()
+	err := recover()
+	fmt.Println(err)
 }

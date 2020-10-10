@@ -1,0 +1,1 @@
+/usr/bin/clang-10 -g  -rdynamic CMakeFiles/learn.dir/nous/alignment.c.o  -o learn 

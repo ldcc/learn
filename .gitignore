@@ -23,3 +23,6 @@ venv/
 ### C, C++, Java
 *.o
 *.class
+
+### Golang
+pkg/

@@ -20,7 +20,7 @@ object NumPic {
             (width).forEach { x ->
                 val _1 = Color(image.getRGB(x, y))
                 val _3 = if (y + 1 in height) Color(image.getRGB(x, y + 1)) else _1
-                val _5 = if (y + 2 in height) Color(image.getRGB(x, y + 1)) else _3
+                val _5 = if (y + 2 in height) Color(image.getRGB(x, y + 2)) else _3
                 val red = (_1.red + _3.red + _5.red) / 3
                 val green = (_1.green + _3.green + _5.green) / 3
                 val blue = (_1.blue + _3.blue + _5.blue) / 3

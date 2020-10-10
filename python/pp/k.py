@@ -24,27 +24,29 @@ def getresult():
     xs = [Symbol(x) for x in ["x0", "x1", "x2", "x3", "x4", "x5"]]
     xslen = len(xs)
 
-    def countp(p_i, rlst, xt_i) -> int:
-        if p_i < xtlen:
-            return xt[p_i] * rlst[xt_i] + countp(p_i + 1, rlst, xt_i + 1)
+    def countp(i, rlst, xt_i):
+        if i < xtlen:
+            return xt[i] * rlst[xt_i] + countp(i + 1, rlst, xt_i + 1)
         else:
             if xt_i > xtlen:
                 return 0
             else:
-                k = p_i - xtlen
-                return xs[k] * t[k] * rlst[xt_i] + countp(p_i + 1, rlst, xt_i + 1)
+                k = i - xtlen
+                return xs[k] * t[k] * rlst[xt_i] + countp(i + 1, rlst, xt_i + 1)
 
-    prob = sum([(1 / (xs[i] * f_v[i] + y_zengzhi[i] + y_yiliu[i] + p[i] * countp(i, rs[i], 0))) * f_c[i] for i in range(xslen)])
+    yeji = 1 / sum([(xs[i] * f_v[i] + y_zengzhi[i] + y_yiliu[i] + p[i] * countp(i, rs[i], 0)) for i in range(xslen)])
+    print(yeji)
+    z = sum([xs[i] * f_c[i] for i in range(xslen)]) * yeji
+    print(z)
 
-    # 载入约束变量
-    prob += sum([(p[i] * countp(i, rs[i], 0) + y_zengzhi[i] + y_yiliu[i] + xs[i] * f_v[i]) / xs[i] * f_c[i] - m_roi for i in range(xslen)])
-    prob += m_c - sum([xs[i] * f_c[i] for i in range(xslen)])
-    sum([xs[i] * f_v[i] + y_zengzhi[i] + y_yiliu[i] + p[i] * countp(i, rs[i], 0) for i in range(xslen)])
-    print(prob)
+    # prob += sum([(xs[i] * f_v[i] + y_zengzhi[i] + y_yiliu[i] + p[i] * countp(i, rs[i], 0)) / xs[i] * f_c[i] - m_roi for i in range(xslen)])
+    # prob += m_c - sum([xs[i] * f_c[i] for i in range(xslen)])
+    # prob += sum([xs[i] * f_v[i] + y_zengzhi[i] + y_yiliu[i] + p[i] * countp(i, rs[i], 0) for i in range(xslen)])
+    # print(prob)
 
     # 求解
-    ret = solve(prob, xs)
-    print(ret)
+    # ret = solve(prob, xs)
+    # print(ret)
 
 
 if __name__ == '__main__':
