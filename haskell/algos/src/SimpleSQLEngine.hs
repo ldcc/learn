@@ -60,33 +60,30 @@ sqlEngine db0 = execute . flip pass db0 . parse
 pass :: Sql -> Database -> Database
 pass (Void) db = db
 pass (Query s f w) db = pass s . pass w . pass f $ db
-pass (Select cols) db = db -- FIXME undefined
+pass (Select cols) db = db -- TODO
 pass (From tb joins) db = case lookup tb db of
+  Nothing -> []
   Just dbos -> foldl f [(tb, dbos)] joins where
     f acc (Join jtb test) = case lookup jtb db of
-      Just jdbos -> pass test $ (jtb, jdbos) : acc
       Nothing -> []
-  Nothing -> []
-pass (Where test) db = undefined
+      Just jdbos -> pass test $ (jtb, jdbos) : acc
+pass (Where test) db = undefined -- TODO
 pass (Test _cmp e1 e2) db = eval e1 e2
   where
     cmp = pickcmp _cmp
-    filtrate col v1 = filter (\dbo -> case lookup col dbo of
-      Just v2 -> v1 == v2
-      Nothing -> False)
     eval :: Sql -> Sql -> Database
     eval (Quoted s1) (Quoted s2) = if cmp s1 s2 then db else []
     eval q@(Quoted _) c@(Column _ _) = eval c q
     eval (Column tb col) (Quoted s) = case pick tb db of
+      Nothing -> []
       Just (dbos, db1) -> case filtrate col s dbos of
         [] -> []
         tl -> (tb, tl) : db1
-      Nothing -> []
     eval (Column tb1 col1) (Column tb2 col2) = case lookup tb1 db of
-      Just dbos1 -> case lookup tb2 db of
-        Just dbos2 -> undefined
-        Nothing -> []
       Nothing -> []
+      Just dbos1 -> case lookup tb2 db of
+        Nothing -> []
+        Just dbos2 -> undefined
 
 parse :: String -> Sql
 parse = parsing . wordsq . unpack . strip . pack . fst . seps . map toLower
@@ -133,6 +130,10 @@ pick _ [] = Nothing
 pick k (xy@(x,y) : xys)
   | k == x = Just (y, xys)
   | otherwise = fmap (xy:) <$> pick k xys
+filtrate :: (Eq a, Eq b) => a -> b -> [[(a, b)]] -> [[(a, b)]]
+filtrate col v1 = filter (\dbo -> case lookup col dbo of
+  Just v2 -> v1 == v2
+  Nothing -> False)
 wordsq :: String -> [String]
 wordsq = wordsq' 0
 wordsq' n str = case dropWhile isSpace str of
