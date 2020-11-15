@@ -55,7 +55,7 @@ sqlEngine db0 = execute . flip pass db0 . parse
     execute [(_,dbos)] = dbos
     execute (tb1:tb2:db) = execute ((cartprod tb1 tb2) : db)
     cartprod :: Table -> Table -> Table
-    cartprod (tb1, dbos1) (tb2, dbos2) = ("ok", [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
+    cartprod (_, dbos1) (_, dbos2) = ("ok", [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
 
 pass :: Sql -> Database -> Database
 pass (Void) db = db
@@ -84,7 +84,13 @@ pass (Test _cmp e1 e2) db = eval e1 e2
       Nothing -> []
       Just (dbos1, db1) -> case pick tb2 db1 of
         Nothing -> []
-        Just (dbos2, db2) -> []
+        Just (dbos2, db2) -> foldr f ("jointb?", []) dbos1 where
+          f dbo1 acc = case lookup col1 dbo1 of
+            Nothing -> []
+            Just v1 -> fmap ([dbo1 ++ dbo2 | dbo2 <- filter (g dbo1) dbos2] ++) acc
+          g dbo1 dbo2 = case lookup col2 dbo2 of
+            Nothing -> []
+            Just v2 -> cmp v1 v2
 
 -- left join >>= map ...
 -- inner join >>=
