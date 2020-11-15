@@ -50,12 +50,12 @@ pickcmp Le = (<=)
 sqlEngine :: Database -> String -> [Dbo]
 sqlEngine db0 = execute . flip pass db0 . parse
   where
-    cartprod :: Table -> Table -> Table
-    cartprod (tb1, dbos1) (tb2, dbos2) = ("ok", [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
     execute :: Database -> [Dbo]
     execute [] = []
     execute [(_,dbos)] = dbos
     execute (tb1:tb2:db) = execute ((cartprod tb1 tb2) : db)
+    cartprod :: Table -> Table -> Table
+    cartprod (tb1, dbos1) (tb2, dbos2) = ("ok", [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
 
 pass :: Sql -> Database -> Database
 pass (Void) db = db
@@ -63,10 +63,11 @@ pass (Query s f w) db = pass s . pass w . pass f $ db
 pass (Select cols) db = db -- TODO
 pass (From tb joins) db = case lookup tb db of
   Nothing -> []
-  Just dbos -> foldl f [(tb, dbos)] joins where
+  Just dbos -> foldl f [addpre (tb, dbos)] joins where
+    addpre tbl = fmap (map.map $ \(k, v) -> (fst tbl++"."++k, v)) tbl
     f acc (Join jtb test) = case lookup jtb db of
       Nothing -> []
-      Just jdbos -> pass test $ (jtb, jdbos) : acc
+      Just jdbos -> pass test $ addpre (jtb, jdbos) : acc
 pass (Where test) db = undefined -- TODO
 pass (Test _cmp e1 e2) db = eval e1 e2
   where
@@ -76,14 +77,17 @@ pass (Test _cmp e1 e2) db = eval e1 e2
     eval q@(Quoted _) c@(Column _ _) = eval c q
     eval (Column tb col) (Quoted s) = case pick tb db of
       Nothing -> []
-      Just (dbos, db1) -> case filtrate col s dbos of
+      Just (dbos, db1) -> case filtrate cmp col s dbos of
         [] -> []
         tl -> (tb, tl) : db1
-    eval (Column tb1 col1) (Column tb2 col2) = case lookup tb1 db of
+    eval (Column tb1 col1) (Column tb2 col2) = case pick tb1 db of
       Nothing -> []
-      Just dbos1 -> case lookup tb2 db of
+      Just (dbos1, db1) -> case pick tb2 db1 of
         Nothing -> []
-        Just dbos2 -> undefined
+        Just (dbos2, db2) -> []
+
+-- left join >>= map ...
+-- inner join >>=
 
 parse :: String -> Sql
 parse = parsing . wordsq . unpack . strip . pack . fst . seps . map toLower
@@ -130,9 +134,9 @@ pick _ [] = Nothing
 pick k (xy@(x,y) : xys)
   | k == x = Just (y, xys)
   | otherwise = fmap (xy:) <$> pick k xys
-filtrate :: (Eq a, Eq b) => a -> b -> [[(a, b)]] -> [[(a, b)]]
-filtrate col v1 = filter (\dbo -> case lookup col dbo of
-  Just v2 -> v1 == v2
+filtrate :: (Eq a, Ord b) => (b -> b -> Bool) -> a -> b -> [[(a, b)]] -> [[(a, b)]]
+filtrate cmp col v1 = filter (\dbo -> case lookup col dbo of
+  Just v2 -> cmp v1 v2
   Nothing -> False)
 wordsq :: String -> [String]
 wordsq = wordsq' 0
