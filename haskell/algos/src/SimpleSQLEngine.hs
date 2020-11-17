@@ -53,44 +53,38 @@ sqlEngine db0 = execute . flip pass db0 . parse
     execute :: Database -> [Dbo]
     execute [] = []
     execute [(_,dbos)] = dbos
-    execute (tb1:tb2:db) = execute ((cartprod tb1 tb2) : db)
-    cartprod :: Table -> Table -> Table
-    cartprod (_, dbos1) (_, dbos2) = ("ok", [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
 
 pass :: Sql -> Database -> Database
+pass _ [] = []
 pass (Void) db = db
 pass (Query s f w) db = pass s . pass w . pass f $ db
 pass (Select cols) db = db -- TODO
 pass (From tb joins) db = case lookup tb db of
   Nothing -> []
   Just dbos -> foldl f [addpre (tb, dbos)] joins where
+    addpre :: Table -> Table
     addpre tbl = fmap (map.map $ \(k, v) -> (fst tbl++"."++k, v)) tbl
-    f acc (Join jtb test) = case lookup jtb db of
+    f [acc] (Join jtb test) = case lookup jtb db of
       Nothing -> []
-      Just jdbos -> pass test $ addpre (jtb, jdbos) : acc
+      Just jdbos -> pass test [(cartprod . addpre) (jtb, jdbos) acc]
 pass (Where test) db = undefined -- TODO
-pass (Test _cmp e1 e2) db = eval e1 e2
+pass (Test _cmp e1 e2) db@[(tb, dbos)] = eval e1 e2
   where
     cmp = pickcmp _cmp
+    comcol (Column tb col) = tb ++ "." ++ col
     eval :: Sql -> Sql -> Database
     eval (Quoted s1) (Quoted s2) = if cmp s1 s2 then db else []
     eval q@(Quoted _) c@(Column _ _) = eval c q
-    eval (Column tb col) (Quoted s) = case pick tb db of
-      Nothing -> []
-      Just (dbos, db1) -> case filtrate cmp col s dbos of
-        [] -> []
-        tl -> (tb, tl) : db1
-    eval (Column tb1 col1) (Column tb2 col2) = case pick tb1 db of
-      Nothing -> []
-      Just (dbos1, db1) -> case pick tb2 db1 of
-        Nothing -> []
-        Just (dbos2, db2) -> foldr f ("jointb?", []) dbos1 where
-          f dbo1 acc = case lookup col1 dbo1 of
-            Nothing -> []
-            Just v1 -> fmap ([dbo1 ++ dbo2 | dbo2 <- filter (g dbo1) dbos2] ++) acc
-          g dbo1 dbo2 = case lookup col2 dbo2 of
-            Nothing -> []
-            Just v2 -> cmp v1 v2
+    eval c@(Column _ _) (Quoted s) = [fmap (filter f) $ head db] where
+      f dbo = case lookup (comcol c) dbo of
+        Nothing -> False
+        Just v -> cmp s v
+    eval c1@(Column _ _) c2@(Column _ _) = [fmap (filter f) $ head db] where
+      f dbo = case lookup (comcol c1) dbo of
+        Nothing -> False
+        Just v1 -> case lookup (comcol c2) dbo of
+          Nothing -> False
+          Just v2 -> cmp v1 v2
 
 -- left join >>= map ...
 -- inner join >>=
@@ -131,6 +125,8 @@ parset [v]
   where u = (== '\'')
 
 
+cartprod :: Table -> Table -> Table
+cartprod (tb, dbos1) (_, dbos2) = (tb, [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
 split :: Eq a => a -> [a] -> ([a], [a])
 split = break . (==)
 group :: Eq a => a -> a -> [[a]] -> [[a]]
@@ -140,10 +136,6 @@ pick _ [] = Nothing
 pick k (xy@(x,y) : xys)
   | k == x = Just (y, xys)
   | otherwise = fmap (xy:) <$> pick k xys
-filtrate :: (Eq a, Ord b) => (b -> b -> Bool) -> a -> b -> [[(a, b)]] -> [[(a, b)]]
-filtrate cmp col v1 = filter (\dbo -> case lookup col dbo of
-  Just v2 -> cmp v1 v2
-  Nothing -> False)
 wordsq :: String -> [String]
 wordsq = wordsq' 0
 wordsq' n str = case dropWhile isSpace str of
