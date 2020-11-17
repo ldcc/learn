@@ -35,8 +35,6 @@ data Sql = Query Sql Sql Sql    -- Select From Where
          | Column String String -- `tb-name`.`col-name`
          deriving (Show, Read)
 
-
--- type Cmp = String -> String -> Bool
 data Cmp = Eq | Ne | Gt | Ge | Lt | Le deriving (Show, Read)
 pickcmp :: Ord a => Cmp -> a -> a -> Bool
 pickcmp Eq = (==)
@@ -46,13 +44,13 @@ pickcmp Ge = (>=)
 pickcmp Lt = (<)
 pickcmp Le = (<=)
 
+------------------------------------- interpreting -------------------------------------
 
 sqlEngine :: Database -> String -> [Dbo]
-sqlEngine db0 = execute . flip pass db0 . parse
-  where
-    execute :: Database -> [Dbo]
-    execute [] = []
-    execute [(_,dbos)] = dbos
+sqlEngine db = indirect . flip pass db . parse where
+  indirect :: Database -> [Dbo]
+  indirect [] = []
+  indirect [(_,dbos)] = dbos
 
 pass :: Sql -> Database -> Database
 pass _ [] = []
@@ -68,7 +66,7 @@ pass (From tb joins) db = case lookup tb db of
       Nothing -> []
       Just jdbos -> pass test [(cartprod . addpre) (jtb, jdbos) acc]
 pass (Where test) db = undefined -- TODO
-pass (Test _cmp e1 e2) db@[(tb, dbos)] = eval e1 e2
+pass (Test _cmp e1 e2) db@[(_, dbos)] = eval e1 e2
   where
     cmp = pickcmp _cmp
     comcol (Column tb col) = tb ++ "." ++ col
@@ -86,8 +84,8 @@ pass (Test _cmp e1 e2) db@[(tb, dbos)] = eval e1 e2
           Nothing -> False
           Just v2 -> cmp v1 v2
 
--- left join >>= map ...
--- inner join >>=
+
+------------------------------------- parsing -------------------------------------
 
 parse :: String -> Sql
 parse = parsing . wordsq . unpack . strip . pack . fst . seps . map toLower
@@ -124,18 +122,23 @@ parset [v]
   | (&&) <$> (u . head) <*> (u . last) $ v = Quoted . tail . init $ v
   where u = (== '\'')
 
+------------------------------------- misc -------------------------------------
 
 cartprod :: Table -> Table -> Table
 cartprod (tb, dbos1) (_, dbos2) = (tb, [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
+
 split :: Eq a => a -> [a] -> ([a], [a])
 split = break . (==)
+
 group :: Eq a => a -> a -> [[a]] -> [[a]]
 group k t (s:ss) = (if t == k then ([]:) else ([]++)) $ (t : s) : ss
+
 pick :: Eq a => a -> [(a, b)] -> Maybe (b, [(a, b)])
 pick _ [] = Nothing
 pick k (xy@(x,y) : xys)
   | k == x = Just (y, xys)
   | otherwise = fmap (xy:) <$> pick k xys
+
 wordsq :: String -> [String]
 wordsq = wordsq' 0
 wordsq' n str = case dropWhile isSpace str of
