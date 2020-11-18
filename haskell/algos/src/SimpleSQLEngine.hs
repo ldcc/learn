@@ -22,8 +22,8 @@ import Data.Maybe (isJust)
 import Text.Read (readMaybe)
 
 type Database = [Table]
-type Table = (String, [Dbo])
-type Dbo = [(String, String)]
+type Table = (String, [Row])
+type Row = [(String, String)]
 
 data Sql = Query Sql Sql Sql    -- Select From Where
          | Select [Sql]         -- Select [Column]
@@ -47,9 +47,9 @@ pickcmp Le = (<=)
 
 ------------------------------------- interpreting -------------------------------------
 
---sqlEngine :: Database -> String -> [Dbo]
+sqlEngine :: Database -> String -> [Row]
 sqlEngine db = sort . indirect . flip pass db . parse where
-  indirect :: Database -> [Dbo]
+  indirect :: Database -> [Row]
   indirect [] = []
   indirect [(_,dbos)] = dbos
 
@@ -58,9 +58,9 @@ pass _ [] = []
 pass (Void) db = db
 pass (Query s f w) db = pass s . pass w . pass f $ db
 pass (Select cols) db = (fmap . fmap) (transpose . f . transpose) db where
-  f rows = foldr (g rows) [] $ map comcol cols
+  f cs = foldr (g cs) [] $ map comcol cols
   g [] _ = id
-  g (r:tl) col = if col == (fst $ head r) then (r:) else g tl col
+  g (c:tl) col = if col == (fst $ head c) then (c:) else g tl col
 pass (From tb joins) db = case lookup tb db of
   Nothing -> []
   Just dbos -> foldl f [addpre (tb, dbos)] joins where
@@ -77,13 +77,13 @@ pass (Test _cmp e1 e2) db = eval e1 e2
     eval (Quoted s1) (Quoted s2) = if cmp s1 s2 then db else []
     eval q@(Quoted _) c@(Column _ _) = eval c q
     eval c@(Column _ _) (Quoted s) = [fmap (filter f) $ head db] where
-      f dbo = case lookup (comcol c) dbo of
+      f row = case lookup (comcol c) row of
         Nothing -> False
         Just v -> cmp v s
     eval c1@(Column _ _) c2@(Column _ _) = [fmap (filter f) $ head db] where
-      f dbo = case lookup (comcol c1) dbo of
+      f row = case lookup (comcol c1) row of
         Nothing -> False
-        Just v1 -> case lookup (comcol c2) dbo of
+        Just v1 -> case lookup (comcol c2) row of
           Nothing -> False
           Just v2 -> cmp v1 v2
 
@@ -131,19 +131,13 @@ cartprod :: Table -> Table -> Table
 cartprod (_, dbos1) (_, dbos2) = ("tmp-table", [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
 
 comcol :: Sql -> String
-comcol (Column tb col) = tb ++ "." ++ col -- TODO case insensitive
+comcol (Column tb col) = tb ++ "." ++ col
 
 split :: Eq a => a -> [a] -> ([a], [a])
 split = break . (==)
 
 group :: Eq a => a -> a -> [[a]] -> [[a]]
 group k t (s:ss) = (if k == t then ([]:) else ([]++)) $ (t : s) : ss
-
-pick :: Eq a => a -> [(a, b)] -> Maybe (b, [(a, b)])
-pick _ [] = Nothing
-pick k (xy@(x,y) : xys)
-  | k == x = Just (y, xys)
-  | otherwise = fmap (xy:) <$> pick k xys
 
 wordsq :: String -> [String]
 wordsq = wordsq' 0

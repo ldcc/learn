@@ -27,9 +27,10 @@ db0 = [ ( "movie"
 
 main :: IO ()
 main = do
-  let execute = putStrLn . show . sqlEngine db0
   let parseast = putStrLn . show . parse
+  let execute = putStrLn . show . sqlEngine db0
 --  parseast sql
 --  execute sql
+  parseast "SELECT movie.title FROM movie WHERE movie.title = 'Pirates of the Caribbean: Dead Man''s Chest'"
   execute "SELECT movie.title FROM movie WHERE movie.title = 'Pirates of the Caribbean: Dead Man''s Chest'"
 
