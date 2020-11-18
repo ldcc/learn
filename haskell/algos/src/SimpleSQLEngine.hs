@@ -15,6 +15,7 @@
 
 module SimpleSQLEngine where
 
+import Data.List (sort, transpose)
 import Data.Char (toLower, isSpace)
 import Data.Text (pack, unpack, strip)
 import Data.Maybe (isJust)
@@ -56,16 +57,18 @@ pass :: Sql -> Database -> Database
 pass _ [] = []
 pass (Void) db = db
 pass (Query s f w) db = pass s . pass w . pass f $ db
-pass (Select cols) db = db >>= return . fmap ((map.filter) f) where
-  f = (`elem` map comcol cols) . fst
+pass (Select cols) db = (fmap . fmap) (transpose . f . transpose) db where
+  f rows = foldr (g rows) [] $ map comcol cols
+  g [] _ = id
+  g rs@(r:tl) col = if col == (fst $ head r) then g tl col else (r:) where
 pass (From tb joins) db = case lookup tb db of
   Nothing -> []
-  Just dbos -> foldl f [addpre (tb, dbos)] joins where
+  Just dbos -> foldr f [addpre (tb, dbos)] joins where
     addpre :: Table -> Table
     addpre tbl = fmap (map.map $ \(k, v) -> (fst tbl++"."++k, v)) tbl
-    f [acc] (Join jtb test) = case lookup jtb db of
+    f (Join jtb test) [acc] = case lookup jtb db of
       Nothing -> []
-      Just jdbos -> pass test [(cartprod . addpre) (jtb, jdbos) acc]
+      Just jdbos -> [(cartprod . addpre) (jtb, jdbos) acc] -- FIXME pass test
 pass (Where test) db = pass test db
 pass (Test _cmp e1 e2) db@[(_, dbos)] = eval e1 e2
   where
@@ -76,7 +79,7 @@ pass (Test _cmp e1 e2) db@[(_, dbos)] = eval e1 e2
     eval c@(Column _ _) (Quoted s) = [fmap (filter f) $ head db] where
       f dbo = case lookup (comcol c) dbo of
         Nothing -> False
-        Just v -> cmp s v
+        Just v -> cmp v s
     eval c1@(Column _ _) c2@(Column _ _) = [fmap (filter f) $ head db] where
       f dbo = case lookup (comcol c1) dbo of
         Nothing -> False
@@ -125,7 +128,7 @@ parset [v]
 ------------------------------------- misc -------------------------------------
 
 cartprod :: Table -> Table -> Table
-cartprod (tb, dbos1) (_, dbos2) = (tb, [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
+cartprod (_, dbos1) (tb, dbos2) = (tb, [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
 
 comcol :: Sql -> String
 comcol (Column tb col) = tb ++ "." ++ col -- TODO case insensitive
@@ -134,7 +137,7 @@ split :: Eq a => a -> [a] -> ([a], [a])
 split = break . (==)
 
 group :: Eq a => a -> a -> [[a]] -> [[a]]
-group k t (s:ss) = (if t == k then ([]:) else ([]++)) $ (t : s) : ss
+group k t (s:ss) = (if k == t then ([]:) else ([]++)) $ (t : s) : ss
 
 pick :: Eq a => a -> [(a, b)] -> Maybe (b, [(a, b)])
 pick _ [] = Nothing
