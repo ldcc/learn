@@ -56,7 +56,8 @@ pass :: Sql -> Database -> Database
 pass _ [] = []
 pass (Void) db = db
 pass (Query s f w) db = pass s . pass w . pass f $ db
-pass (Select cols) db = db -- TODO
+pass (Select cols) db = db >>= return . fmap ((map.filter) f) where
+  f = (`elem` map comcol cols) . fst
 pass (From tb joins) db = case lookup tb db of
   Nothing -> []
   Just dbos -> foldl f [addpre (tb, dbos)] joins where
@@ -65,11 +66,10 @@ pass (From tb joins) db = case lookup tb db of
     f [acc] (Join jtb test) = case lookup jtb db of
       Nothing -> []
       Just jdbos -> pass test [(cartprod . addpre) (jtb, jdbos) acc]
-pass (Where test) db = undefined -- TODO
+pass (Where test) db = pass test db
 pass (Test _cmp e1 e2) db@[(_, dbos)] = eval e1 e2
   where
     cmp = pickcmp _cmp
-    comcol (Column tb col) = tb ++ "." ++ col
     eval :: Sql -> Sql -> Database
     eval (Quoted s1) (Quoted s2) = if cmp s1 s2 then db else []
     eval q@(Quoted _) c@(Column _ _) = eval c q
@@ -88,7 +88,7 @@ pass (Test _cmp e1 e2) db@[(_, dbos)] = eval e1 e2
 ------------------------------------- parsing -------------------------------------
 
 parse :: String -> Sql
-parse = parsing . wordsq . unpack . strip . pack . fst . seps . map toLower
+parse = parsing . wordsq . unpack . strip . pack . fst . seps
   where
     sep = \x -> (>>= \f -> if f x then (' ':[x], not . f) else ([x], f))
     seps = foldl (flip sep) ([], flip elem ",=<>")
@@ -127,6 +127,9 @@ parset [v]
 cartprod :: Table -> Table -> Table
 cartprod (tb, dbos1) (_, dbos2) = (tb, [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
 
+comcol :: Sql -> String
+comcol (Column tb col) = tb ++ "." ++ col -- TODO case insensitive
+
 split :: Eq a => a -> [a] -> ([a], [a])
 split = break . (==)
 
@@ -144,10 +147,16 @@ wordsq = wordsq' 0
 wordsq' n str = case dropWhile isSpace str of
     "" -> []
     str' -> case newn of
-      0 -> w : nwords
-      _ -> (w ++ " " ++ head nwords) : (tail nwords)
+      0 -> w' : nwords
+      _ -> (w' ++ " " ++ head nwords) : (tail nwords)
       where
         (w, str'') = break isSpace str'
+        w' = case map toLower w of
+          "select" -> "select"
+          "where" -> "where"
+          "from" -> "from"
+          "join" -> "join"
+          _ -> w
         newn = case (head w, last w) of
           ('\'', '\'') -> n
           ('\'', _) -> n + 1
