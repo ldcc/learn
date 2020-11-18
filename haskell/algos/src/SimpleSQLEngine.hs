@@ -153,10 +153,15 @@ wordsq' n str = case dropWhile isSpace str of
           "where" -> "where"
           "from" -> "from"
           "join" -> "join"
-          _ -> w
+          _ -> replaceq w
         newn = case (head w, last w) of
           ('\'', '\'') -> n
           ('\'', _) -> n + 1
           (_, '\'') -> n - 1
           _ -> n
         nwords = wordsq' newn str''
+
+replaceq :: String -> String
+replaceq [] = []
+replaceq ('\'':'\'':w) = '\'' : replaceq w
+replaceq (c:w) = c : replaceq w
