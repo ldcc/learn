@@ -47,8 +47,8 @@ pickcmp Le = (<=)
 
 ------------------------------------- interpreting -------------------------------------
 
-sqlEngine :: Database -> String -> [Dbo]
-sqlEngine db = indirect . flip pass db . parse where
+--sqlEngine :: Database -> String -> [Dbo]
+sqlEngine db = sort . indirect . flip pass db . parse where
   indirect :: Database -> [Dbo]
   indirect [] = []
   indirect [(_,dbos)] = dbos
@@ -60,17 +60,17 @@ pass (Query s f w) db = pass s . pass w . pass f $ db
 pass (Select cols) db = (fmap . fmap) (transpose . f . transpose) db where
   f rows = foldr (g rows) [] $ map comcol cols
   g [] _ = id
-  g rs@(r:tl) col = if col == (fst $ head r) then g tl col else (r:) where
+  g (r:tl) col = if col == (fst $ head r) then (r:) else g tl col
 pass (From tb joins) db = case lookup tb db of
   Nothing -> []
-  Just dbos -> foldr f [addpre (tb, dbos)] joins where
+  Just dbos -> foldl f [addpre (tb, dbos)] joins where
     addpre :: Table -> Table
     addpre tbl = fmap (map.map $ \(k, v) -> (fst tbl++"."++k, v)) tbl
-    f (Join jtb test) [acc] = case lookup jtb db of
+    f [acc] (Join jtb test) = case lookup jtb db of
       Nothing -> []
-      Just jdbos -> [(cartprod . addpre) (jtb, jdbos) acc] -- FIXME pass test
+      Just jdbos -> pass test [(cartprod . addpre) (jtb, jdbos) acc]
 pass (Where test) db = pass test db
-pass (Test _cmp e1 e2) db@[(_, dbos)] = eval e1 e2
+pass (Test _cmp e1 e2) db = eval e1 e2
   where
     cmp = pickcmp _cmp
     eval :: Sql -> Sql -> Database
@@ -128,7 +128,7 @@ parset [v]
 ------------------------------------- misc -------------------------------------
 
 cartprod :: Table -> Table -> Table
-cartprod (_, dbos1) (tb, dbos2) = (tb, [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
+cartprod (_, dbos1) (_, dbos2) = ("tmp-table", [dbo1 ++ dbo2 | dbo1 <- dbos1, dbo2 <- dbos2])
 
 comcol :: Sql -> String
 comcol (Column tb col) = tb ++ "." ++ col -- TODO case insensitive

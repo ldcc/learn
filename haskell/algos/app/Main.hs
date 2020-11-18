@@ -3,53 +3,33 @@ module Main where
 import SimpleSQLEngine
 
 db0 = [ ( "movie"
-        , [ [ ( "id", "1" ), ( "name", "Avatar"   ), ( "directorID", "1" ) ]
---          , [ ( "id", "2" ), ( "name", "Titanic"  ), ( "directorID", "1" ) ]
---           , [ ( "id", "3" ), ( "name", "Infamous" ), ( "directorID", "2" ) ]
---           , [ ( "id", "4" ), ( "name", "Skyfall"  ), ( "directorID", "3" ) ]
---           , [ ( "id", "5" ), ( "name", "Aliens"   ), ( "directorID", "1" ) ]
-          ]
-        )
-      , ( "actor"
-        , [ [ ( "id", "1" ), ( "name", "Leonardo DiCaprio" ) ]
---          , [ ( "id", "2" ), ( "name", "Sigourney Weaver"  ) ]
-          , [ ( "id", "3" ), ( "name", "Daniel Craig"      ) ]
-          ]
-        )
-      , ( "director"
-        , [ [ ( "id", "1" ), ( "name", "James Cameron"   ) ]
-          , [ ( "id", "2" ), ( "name", "Douglas McGrath" ) ]
-           , [ ( "id", "3" ), ( "name", "Sam Mendes"      ) ]
-          ]
-        )
-      , ( "actor_to_movie"
-        , [ [ ( "movieID", "1" ), ( "actorID", "2" ) ]
---          , [ ( "movieID", "2" ), ( "actorID", "1" ) ]
---          , [ ( "movieID", "3" ), ( "actorID", "2" ) ]
---          , [ ( "movieID", "3" ), ( "actorID", "3" ) ]
---          , [ ( "movieID", "4" ), ( "actorID", "3" ) ]
---          , [ ( "movieID", "5" ), ( "actorID", "2" ) ]
+        , [ [ ( "id", "01" ), ( "title", "The A-Team"                                        ), ( "year", "2010" ), ( "directorID", "01" ) ]
+          , [ ( "id", "02" ), ( "title", "Avatar"                                            ), ( "year", "2009" ), ( "directorID", "02" ) ]
+          , [ ( "id", "03" ), ( "title", "Titanic"                                           ), ( "year", "1997" ), ( "directorID", "02" ) ]
+          , [ ( "id", "04" ), ( "title", "The Avengers"                                      ), ( "year", "2012" ), ( "directorID", "03" ) ]
+          , [ ( "id", "05" ), ( "title", "Iron Man 3"                                        ), ( "year", "2013" ), ( "directorID", "04" ) ]
+          , [ ( "id", "06" ), ( "title", "Iron Man"                                          ), ( "year", "2008" ), ( "directorID", "05" ) ]
+          , [ ( "id", "07" ), ( "title", "The Lord of the Rings: The Return of the King"     ), ( "year", "2003" ), ( "directorID", "06" ) ]
+          , [ ( "id", "08" ), ( "title", "The Lord of the Rings: The Fellowship of the Ring" ), ( "year", "2001" ), ( "directorID", "06" ) ]
+          , [ ( "id", "09" ), ( "title", "The Lord of the Rings: The Two Towers"             ), ( "year", "2002" ), ( "directorID", "06" ) ]
+          , [ ( "id", "10" ), ( "title", "Skyfall"                                           ), ( "year", "2012" ), ( "directorID", "07" ) ]
+          , [ ( "id", "11" ), ( "title", "The Dark Knight Rises"                             ), ( "year", "2012" ), ( "directorID", "08" ) ]
+          , [ ( "id", "12" ), ( "title", "The Dark Knight"                                   ), ( "year", "2008" ), ( "directorID", "08" ) ]
+          , [ ( "id", "13" ), ( "title", "Pirates of the Caribbean: Dead Man's Chest"        ), ( "year", "2006" ), ( "directorID", "09" ) ]
+          , [ ( "id", "14" ), ( "title", "Toy Story 3"                                       ), ( "year", "2010" ), ( "directorID", "10" ) ]
+          , [ ( "id", "15" ), ( "title", "E.T. the Extra-Terrestrial"                        ), ( "year", "1982" ), ( "directorID", "11" ) ]
+          , [ ( "id", "16" ), ( "title", "Toy Story"                                         ), ( "year", "1995" ), ( "directorID", "12" ) ]
+          , [ ( "id", "17" ), ( "title", "Pirates of the Caribbean: On Stranger Tides"       ), ( "year", "2011" ), ( "directorID", "13" ) ]
+          , [ ( "id", "18" ), ( "title", "Jurassic Park"                                     ), ( "year", "1993" ), ( "directorID", "11" ) ]
           ]
         )
       ]
-
-sql = "select movie.name   \
-                            \     , actor.name\
-                            \  FROM movie\
-                            \  Join actor_to_movie\
-                            \       oN actor_to_movie.movieID=movie.id\
-                            \  JoIn actor\
-                            \    oN actor_to_movie.actorID = actor.id\
-                            \ WheRe \n\
-                            \   actor.name <> 'Daniel Craig'"
 
 main :: IO ()
 main = do
   let execute = putStrLn . show . sqlEngine db0
   let parseast = putStrLn . show . parse
---  execute "select movie.name from movie"
---  execute "SELECT movie.name FROM movie WHERE movie.directorID = '1'"
---  execute "SelecT movie.name,director.name\nFroM director\nJoiN movie ON director.id = movie.directorID\n"
-  parseast sql
-  execute sql
+--  parseast sql
+--  execute sql
+  execute "SELECT movie.title FROM movie WHERE movie.title = 'Pirates of the Caribbean: Dead Man''s Chest'"
 
