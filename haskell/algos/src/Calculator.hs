@@ -25,7 +25,7 @@ parse :: [String] -> [String]
 parse = parsing [] []
   where
   parsing :: [String] -> [String] -> [String] -> [String]
-  parsing stack1 stack2 [] = merging stack1 stack2 [] (\_ -> True)
+  parsing stack1 stack2 [] = merging stack1 stack2 [] (const True)
   parsing stack1 stack2 (t:ts)
     | elem t ["*", "/"] = parsing (t:stack1) stack2 ts
     | elem t ["+", "-"] = merging stack1 stack2 (t:ts) $ flip elem ["*", "/"]

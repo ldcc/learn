@@ -23,7 +23,7 @@ pass1 prog = fst . generates $ parsing [] [] $ reverse tokens
     split (']':ts) = (words $ separates ts, [])
     split (t:ts) = let (nts, nt) = split ts in (nts, t:nt)
     separates = foldl (\ acc c -> acc ++ if elem c "+-*/()" then [' ', c, ' '] else [c]) []
-    parsing stack1 stack2 [] = merging stack1 stack2 [] $ \_ -> True
+    parsing stack1 stack2 [] = merging stack1 stack2 [] $ const True
     parsing stack1 stack2 (t:ts)
       | t == ")" = parsing (t:stack1) stack2 ts
       | t == "(" = merging stack1 stack2 (t:ts) $ not . (==) ")"

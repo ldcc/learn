@@ -44,12 +44,12 @@ input prog env = return (parse prog) >>= genAst env >>= checkAst >>= interp env
 parse :: String -> [String]
 parse = parsing [] [] . reverse . words . foldl (\ acc t -> acc ++ if elem t "+-*/%()" then [' ', t, ' '] else [t]) []
   where
-    parsing stack1 stack2 [] = merging stack1 stack2 [] $ \_ -> True
+    parsing stack1 stack2 [] = merging stack1 stack2 [] $ const True
     parsing stack1 stack2 (t:ts)
       | t == ")" = parsing (t:stack1) stack2 ts
       | t == "(" = merging stack1 stack2 (t:ts) $ not . (==) ")"
       | t == "=" = merging stack1 stack2 (t:ts) $ not . (==) ")"
-      | t == "=>" = merging stack1 stack2 (t:ts) $ \_ -> True
+      | t == "=>" = merging stack1 stack2 (t:ts) $ const True
       | elem t ["*", "/", "%"] = parsing (t:stack1) stack2 ts
       | elem t ["+", "-"] = merging stack1 stack2 (t:ts) $ flip elem ["*", "/"]
       | otherwise = parsing stack1 (t:stack2) ts
