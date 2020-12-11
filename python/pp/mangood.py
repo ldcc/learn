@@ -32,14 +32,12 @@ def gps_crdi(name, data):
         for j in range(len(i) - 1):
             b += i[j] + '.*'
         b += i[-1]
-        for i in data:
-            i_new = i.replace(',', '')
+        for o in data:
+            i_new = o.replace(',', '')
             res = re.search(b, i_new)
-            if not (res is None):
+            if res is not None:
                 v = b.replace('.*', '')
-                if r.get(v) is None:
-                    r[v] = 0
-                r[v] += 1
+                r[v] = r.setdefault(v, 0) + 1
     return r
 
 
@@ -47,9 +45,7 @@ def gps(data):
     r_di = {}
     for i in data:
         for j in set(i.split(',')):
-            if r_di.get(j) is None:
-                r_di[j] = 0
-            r_di[j] += 1
+            r_di[j] = r_di.setdefault(j, 0) + 1
 
     di = gps_de(r_di, 2)
     nuu = 1
@@ -90,7 +86,6 @@ def calc():
         di_3 = gps(order)
         if di_3 is not None and len(di_3) != 0:
             di_3s[k] = di_3
-        print('--------------------------------------------')
     return di_3s
 
 
