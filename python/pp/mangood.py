@@ -1,5 +1,6 @@
 import re
 import pandas
+from mpmath.calculus.extrapolation import fold_finite
 
 
 def dell(d, na):
@@ -66,12 +67,12 @@ def groupby(rows):
     orders = {}
     for i, row in rows:
         guest = str(row['客户'])
-        component = str(row['产品组合'])
+        prods = set(str(row['产品组合']).split(','))
         goods = orders.get(guest)
         if goods is None:
-            goods = [component]
+            goods = [prods]
         else:
-            goods.append(component)
+            goods.append(prods)
         orders[guest] = goods
     return orders
 
@@ -80,6 +81,7 @@ def calc():
     orders = groupby(dataset.iterrows())
     di_3s = {}
     print(orders)
+    return di_3s
     for k, order in orders.items():
         print('--------------------------------------------')
         print(order)
@@ -91,5 +93,6 @@ def calc():
 
 dataset = pandas.read_excel(r'dataset220201209.xlsx', sheet_name='业绩总体')
 if __name__ == '__main__':
+    print(dataset)
     gpsde = calc()
     print(gpsde)
