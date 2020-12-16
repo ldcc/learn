@@ -1,12 +1,5 @@
 import re
 import pandas
-from mpmath.calculus.extrapolation import fold_finite
-
-
-def dell(d, na):
-    for i in na:
-        del d[i]
-    return d
 
 
 def gps_de(d, n):
@@ -14,7 +7,9 @@ def gps_de(d, n):
     for k, v in d.items():
         if v < n:
             name.append(k)
-    return dell(d, name)
+    for i in name:
+        del d[i]
+    return d
 
 
 def gps_cr(d, first):
@@ -64,25 +59,28 @@ def gps(data):
 
 
 def groupby(rows):
+    combind = {}
     orders = {}
     for i, row in rows:
-        guest = str(row['客户'])
+        ge = str(row['客户'])
         prods = set(str(row['产品组合']).split(','))
-        goods = orders.get(guest)
+        goods = orders.get(ge)
         if goods is None:
-            goods = [prods]
+            combind[ge] = []
         else:
-            goods.append(prods)
-        orders[guest] = goods
-    return orders
+            combind[ge].extend([v1 + ',' + v2 for v1 in goods for v2 in prods])
+        orders[ge] = prods
+
+    return combind
 
 
 def calc():
     orders = groupby(dataset.iterrows())
     di_3s = {}
     print(orders)
-    return di_3s
     for k, order in orders.items():
+        if len(order) == 0:
+            continue
         print('--------------------------------------------')
         print(order)
         di_3 = gps(order)
