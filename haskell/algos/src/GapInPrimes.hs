@@ -48,11 +48,10 @@ gap g m n
   | otherwise = pick g $ filter isPrime [m .. n]
 
 pick :: Integer -> [Integer] -> Maybe (Integer, Integer)
-pick _ [] = Nothing
-pick _ [_] = Nothing
 pick g (x:y:xs)
   | y - x == g = Just (x, y)
   | otherwise = pick g (y:xs)
+pick _ _ = Nothing
 
 isPrime n = all (\ d -> n `mod` d /= 0) [2 .. floor . sqrt . fromIntegral $ n]
 
