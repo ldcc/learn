@@ -1,6 +1,6 @@
 module Main where
 
-import SimpleSQLEngine
+import G964Partition
 
 db0 = [ ( "movie"
         , [ [ ( "id", "01" ), ( "title", "The A-Team"                                        ), ( "year", "2010" ), ( "directorID", "01" ) ]
@@ -27,12 +27,8 @@ db0 = [ ( "movie"
 
 main :: IO ()
 main = do
-  let parseast = putStrLn . show . parse
-  let execute = putStrLn . show . sqlEngine db0
---  parseast sql
---  execute sql
-  parseast "SELECT movie.title FROM movie WHERE movie.title = 'Pirates of the Caribbean: Dead Man''s Chest'"
-  execute "SELECT movie.title FROM movie WHERE movie.title = 'Pirates of the Caribbean: Dead Man''s Chest'"
+  let e = enum 5
+  show s
 
 
 isLochNessMonster xs@('t':'r':'e':'e':' ':'f':'i':'d':'d':'y':_) = f . words . map toLower

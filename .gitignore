@@ -3,6 +3,9 @@
 out/
 asterisk/
 
+### Docs
+*.xlsx
+
 ### Rust
 target/
 Cargo.lock
@@ -26,6 +29,10 @@ venv/
 
 ### Golang
 pkg/
+bin/
 
 ### Cmake, Make, Autotool
 cmake-build-debug
+
+### Docker
+*.img

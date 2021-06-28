@@ -40,18 +40,45 @@
 --Median : The median is the number separating the higher half of a data sample from the lower half. (https://en.wikipedia.org/wiki/Median)
 
 module G964Partition where
+import Text.Printf (printf)
+import Data.List (sort, group)
+import Data.Function (on)
 
 part :: Int -> String
 part = range . prod . enum
 
-enum :: Int -> [[Int]]
-enum 0 = []
-enum n = [[n]] ++ [(++) <$> enum (n-1) <*> [[1]]]
+isPrime n = all (\ d -> n `mod` d /= 0) [2 .. floor . sqrt . fromIntegral $ n]
+
+enum :: Int -> [(Int, [[Int]])]
+enum n = _enum [] n
   where
-    f 0 = []
-    f k = f (n-k) f k
+    _lookup :: [(Int, [[Int]])] -> Int -> [(Int, [[Int]])]
+    _lookup pmap n = case lookup n pmap of
+      Just _ -> pmap
+      Nothing -> _enum pmap n
+    _enum :: [(Int, [[Int]])] -> Int -> [(Int, [[Int]])]
+    _enum pmap 0 = []
+    _enum pmap n = foldl f ((n,[[n]]):pmap) $ filter isPrime [1 .. floor . sqrt . fromIntegral $ n]
+      where
+        f _pmap k = m2
+          where
+            m1 = _lookup _pmap k
+            m2 = _lookup m1 (n-k)
+
 
 prod :: [[Int]] -> [Int]
+prod = map head . group . sort . map product
 
 range :: [Int] -> String
+range ps = printf "Range: %d Average: %.2f Median: %.2f" (rng ps) (avg ps) (med ps)
+  where
+    rng :: [Int] -> Int
+    rng = (-) <$> last <*> head
+    avg :: [Int] -> Double
+    avg = on (/) fromIntegral <$> sum <*> length
+    med :: [Int] -> Double
+    med ps
+      | odd n = fromIntegral $ ps !! div n 2
+      | even n = ((.) (/2.0) . on (+) med <$> tail <*> init) ps
+      where n = length $ ps
 
