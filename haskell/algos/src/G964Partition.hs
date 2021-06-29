@@ -43,28 +43,34 @@ module G964Partition where
 import Text.Printf (printf)
 import Data.List (sort, group)
 import Data.Function (on)
+import Data.Maybe (fromJust)
+import Data.Map as M (Map, fromList, insert, lookup)
 
 part :: Int -> String
 part = range . prod . enum
 
 isPrime n = all (\ d -> n `mod` d /= 0) [2 .. floor . sqrt . fromIntegral $ n]
 
-enum :: Int -> [(Int, [[Int]])]
-enum n = _enum [] n
+enum :: Int -> [[Int]]
+enum n = fromJust $ M.lookup n (_enum (fromList []) n)
   where
-    _lookup :: [(Int, [[Int]])] -> Int -> [(Int, [[Int]])]
-    _lookup pmap n = case lookup n pmap of
-      Just _ -> pmap
-      Nothing -> _enum pmap n
-    _enum :: [(Int, [[Int]])] -> Int -> [(Int, [[Int]])]
-    _enum pmap 0 = []
-    _enum pmap n = foldl f ((n,[[n]]):pmap) $ filter isPrime [1 .. floor . sqrt . fromIntegral $ n]
+    _lookup :: Map Int [[Int]] -> Int -> ([[Int]], Map Int [[Int]])
+    _lookup pmap n = case M.lookup n pmap of
+      Just v -> (v, pmap)
+      Nothing -> case M.lookup n nmap of
+        Just v -> (v, nmap)
+        where nmap = _enum pmap n
+    _enum :: Map Int [[Int]] -> Int -> Map Int [[Int]]
+    _enum pmap 1 = fromList [(1, [[1]])]
+    _enum pmap n = foldl f (insert n [[n]] pmap) $ filter isPrime [1 .. floor . sqrt . fromIntegral $ n]
       where
-        f _pmap k = m2
+        f _pmap k = insert n (merge (fromJust $ M.lookup n _pmap) ((++) <$> e1 <*> e2)) (insert (n-k) e2 m2)
           where
-            m1 = _lookup _pmap k
-            m2 = _lookup m1 (n-k)
+            (e1, m1) = _lookup _pmap k
+            (e2, m2) = _lookup (insert k e1 m1) (n-k)
 
+merge :: [[Int]] -> [[Int]] -> [[Int]]
+merge e1 e2 = map head . group . sort . map sort $ e1 ++ e2
 
 prod :: [[Int]] -> [Int]
 prod = map head . group . sort . map product
@@ -81,4 +87,3 @@ range ps = printf "Range: %d Average: %.2f Median: %.2f" (rng ps) (avg ps) (med 
       | odd n = fromIntegral $ ps !! div n 2
       | even n = ((.) (/2.0) . on (+) med <$> tail <*> init) ps
       where n = length $ ps
-
