@@ -47,33 +47,31 @@ import Data.Maybe (fromJust)
 import Data.Map as M (Map, fromList, insert, lookup)
 
 part :: Int -> String
-part = range . prod . enum
+part = range . enum
 
 isPrime n = all (\ d -> n `mod` d /= 0) [2 .. floor . sqrt . fromIntegral $ n]
 
-enum :: Int -> [[Int]]
+enum :: Int -> [Int]
 enum n = fromJust $ M.lookup n (_enum (fromList []) n)
   where
-    _lookup :: Map Int [[Int]] -> Int -> ([[Int]], Map Int [[Int]])
+    _lookup :: Map Int [Int] -> Int -> ([Int], Map Int [Int])
     _lookup pmap n = case M.lookup n pmap of
       Just v -> (v, pmap)
       Nothing -> case M.lookup n nmap of
         Just v -> (v, nmap)
         where nmap = _enum pmap n
-    _enum :: Map Int [[Int]] -> Int -> Map Int [[Int]]
-    _enum pmap 1 = fromList [(1, [[1]])]
-    _enum pmap n = foldl f (insert n [[n]] pmap) $ filter isPrime [1 .. floor . sqrt . fromIntegral $ n]
+    _enum :: Map Int [Int] -> Int -> Map Int [Int]
+    _enum pmap 1 = fromList [(1, [1])]
+    _enum pmap n = foldl f (insert n [n] pmap) $ filter isPrime [1 .. div n 2]
       where
-        f _pmap k = insert n (merge (fromJust $ M.lookup n _pmap) ((++) <$> e1 <*> e2)) (insert (n-k) e2 m2)
+        f :: Map Int [Int] -> Int -> Map Int [Int]
+        f _pmap k = insert n (merge (fromJust $ M.lookup n _pmap) [v1 * v2 | v1 <- e1, v2 <- e2]) (insert (n-k) e2 m2)
           where
             (e1, m1) = _lookup _pmap k
             (e2, m2) = _lookup (insert k e1 m1) (n-k)
 
-merge :: [[Int]] -> [[Int]] -> [[Int]]
-merge e1 e2 = map head . group . sort . map sort $ e1 ++ e2
-
-prod :: [[Int]] -> [Int]
-prod = map head . group . sort . map product
+merge :: [Int] -> [Int] -> [Int]
+merge e1 e2 = map head . group . sort $ e1 ++ e2
 
 range :: [Int] -> String
 range ps = printf "Range: %d Average: %.2f Median: %.2f" (rng ps) (avg ps) (med ps)
