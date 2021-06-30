@@ -1,4 +1,4 @@
--- https://www.codewars.com/kata/55cf3b567fc0e02b0b00000b/train/haskell
+--https://www.codewars.com/kata/55cf3b567fc0e02b0b00000b/train/haskell
 --From wikipedia https://en.wikipedia.org/wiki/Partition_(number_theory)
 --
 --In number theory and combinatorics, a partition of a positive integer n, also called an integer partition, is a way of writing n as a sum of positive integers. Two sums that differ only in the order of their summands are considered the same partition.
@@ -61,7 +61,7 @@ enum n = fromJust $ M.lookup n (_enum (fromList []) n)
     _enum pmap 1 = fromList [(1, [1])]
     _enum pmap n = foldl f (insert n [n] pmap) $ filter isPrime [1 .. div n 2]
       where
-        f _pmap k = insert n (merge (fromJust $ M.lookup n _pmap) [v1 * v2 | v1 <- e1, v2 <- e2]) (insert (n-k) e2 m2)
+        f _pmap k = insert n (merge (fromJust $ M.lookup n _pmap) ((*) <$> e1 <*> e2)) (insert (n-k) e2 m2)
           where
             (e1, m1) = _lookup _pmap k
             (e2, m2) = _lookup (insert k e1 m1) (n-k)
