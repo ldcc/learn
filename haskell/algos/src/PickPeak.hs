@@ -25,7 +25,7 @@
 
 module PickPeak where
 
-data PickedPeaks = PickedPeaks { pos :: [Int], peaks :: [Int]} deriving (Eq, Show)
+data PickedPeaks = PickedPeaks {pos :: [Int], peaks :: [Int]} deriving (Eq, Show)
 
 pickPeaks :: [Int] -> PickedPeaks
 pickPeaks = pick Nothing 0 id
