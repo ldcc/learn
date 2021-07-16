@@ -10,13 +10,22 @@ module Pathfinder1 where
 
 import Data.Set (Set, empty, member, insert, fromList, (\\))
 
-class Walk a where
-  (!?) :: a -> Set a -> (Set a, Bool)
-
 data Point = Pt Int Int deriving (Show, Read, Ord, Eq)
 
-instance Walk Point where
+class Foldable f => Walk f where
+--  (!?) :: Ord a => Point -> f [Char] -> (f a, Bool)
+--  (!?) :: Ord a => a -> f a -> (f a, Bool)
+  (!?) :: Point -> f Point -> (f Point, Bool)
+
+instance Walk Set where
   p !? ps = (insert p ps, not $ member p ps)
+
+instance Walk [] where
+  (Pt i j) !? ps
+    | i < 0 || j < 0 || i >= li || j >= lj = ([], False)
+    | otherwise = fmap (=='.') $ ([], (ps !! i !! j))
+    where
+      (li, lj) = (length ps, length $ ps !! 0)
 
 pathFinder :: String -> Bool
 pathFinder = finder empty (Pt 0 0) . word
@@ -29,3 +38,5 @@ finder path p@(Pt i j) maze = fmap walk (p !? path)
 
 directions :: Point -> Set Point -> Set Point
 directions (Pt i j) = (\\) $ fromList $ [[Pt (i+x) j, Pt i (j+x)] | x <- [1,-1]] >>= id
+
+intercalate "\n" [".W...", ".W...", ".W.W.", "...W.", "...W."]
