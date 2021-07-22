@@ -10,33 +10,29 @@ module Pathfinder1 where
 
 import Data.Set (Set, empty, member, insert, fromList, (\\))
 
+data Travel = Failed | Continue | Succeed
 data Point = Pt Int Int deriving (Show, Read, Ord, Eq)
 
-class Foldable f => Walk f where
---  (!?) :: Ord a => Point -> f [Char] -> (f a, Bool)
---  (!?) :: Ord a => a -> f a -> (f a, Bool)
-  (!?) :: Point -> f Point -> (f Point, Bool)
+class Ord a => Walk a where
+  (!?) :: a -> Set a -> (Set a, a)
+  bump :: [String] -> a -> Travel
+  redirect :: a -> Set a -> Set a
 
-instance Walk Set where
-  p !? ps = (insert p ps, not $ member p ps)
-
-instance Walk [] where
-  (Pt i j) !? ps
-    | i < 0 || j < 0 || i >= li || j >= lj = ([], False)
-    | otherwise = fmap (=='.') $ ([], (ps !! i !! j))
-    where
-      (li, lj) = (length ps, length $ ps !! 0)
+instance Walk Point where
+  p !? ps = (insert p ps, if not $ member p ps then p else Pt (-1) (-1))
+  bump ps (Pt i j)
+    | i < 0 || j < 0 || i >= li || j >= lj = Failed
+    | i == li - 1 && j == lj - 1 = Succeed
+    | otherwise = if ps !! i !! j == '.' then Continue else Failed
+    where (li, lj) = (length ps, length $ ps !! 0)
+  redirect (Pt i j) = (\\) $ fromList $ [[Pt (i+x) j, Pt i (j+x)] | x <- [1,-1]] >>= id
 
 pathFinder :: String -> Bool
-pathFinder = finder empty (Pt 0 0) . word
+pathFinder maze = snd $ finder (words maze) (empty, False) (Pt 0 0)
 
-finder :: Set Point -> Point -> [String] -> (Set Point, Bool)
-finder path p@(Pt i j) maze = fmap walk (p !? path)
-  where
-    walk False = False
-    walk True = find ()
-
-directions :: Point -> Set Point -> Set Point
-directions (Pt i j) = (\\) $ fromList $ [[Pt (i+x) j, Pt i (j+x)] | x <- [1,-1]] >>= id
-
-intercalate "\n" [".W...", ".W...", ".W.W.", "...W.", "...W."]
+finder :: [String] -> (Set Point, Bool) -> Point -> (Set Point, Bool)
+finder _ path@(_, True) _ = path
+finder maze path p = case fmap (bump maze) (p !? fst path) of
+  (npath, Failed) -> (npath, False)
+  (npath, Succeed) -> (npath, True)
+  (npath, Continue) -> foldl (finder maze) (npath, False) (redirect p npath)
