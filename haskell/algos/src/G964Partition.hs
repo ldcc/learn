@@ -49,6 +49,7 @@ import Data.Map as M (Map, fromList, insert, lookup)
 part :: Int -> String
 part = range . enum
 
+isPrime :: Int -> Bool
 isPrime n = all (\ d -> n `mod` d /= 0) [2 .. floor . sqrt . fromIntegral $ n]
 
 enum :: Int -> [Int]
@@ -70,7 +71,9 @@ range :: [Int] -> String
 range ps = printf "Range: %d Average: %.2f Median: %.2f" (rng ps) (avg ps) (med ps)
   where
     rng = (-) <$> last <*> head
+    avg :: [Int] -> Float
     avg = on (/) fromIntegral <$> sum <*> length
+    med :: [Int] -> Float
     med ps
       | odd n = fromIntegral $ ps !! div n 2
       | even n = ((.) (/2.0) . on (+) med <$> tail <*> init) ps

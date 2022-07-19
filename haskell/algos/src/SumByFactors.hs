@@ -20,7 +20,7 @@
 --
 --In Fortran - as in any other language - the returned string is not permitted to contain any redundant trailing whitespace: you can use dynamically allocated character strings.
 
-module Codewars.Kata.SumByFactors where
+module SumByFactors where
 import Data.List (sort, nub)
 
 sumOfDivided :: [Integer] -> [(Integer, Integer)]

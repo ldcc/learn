@@ -30,7 +30,8 @@
 --Hint
 --Very often xk will be n-1.
 
-decompose :: Integer -> Maybe [Integer]
+module SqIntoSq where
+
 decompose :: Integer -> Maybe [Integer]
 decompose = compose <$> pred <*> (^2)
   where

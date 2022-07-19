@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, TypeFamilies, GADTs, UndecidableInstances, TemplateHaskell, KindSignatures #-}
+{-# LANGUAGE TypeOperators, TypeFamilies, GADTs, UndecidableInstances, TemplateHaskell, KindSignatures, RankNTypes #-}
 module InvertAdd where
 
 -- | The natural numbers, encoded in types.
@@ -23,7 +23,7 @@ type instance S n :+: m = S (n :+: m)
 
 
 invert :: Natural a -> Natural b -> Equal (a :+: a) (b :+: b) -> Equal a b
-invert = _ -- prove it!
+invert = undefined -- prove it!
 
 
 type Generic i o = forall x. (x -> i x) -> x -> o (i x)

@@ -6,7 +6,7 @@
 --Walls are marked W.
 --Start and exit positions are empty in all test cases.
 
-module Pathfinder1 where
+module Pathfinder where
 
 import Data.Set (Set, empty, member, insert, fromList, (\\))
 

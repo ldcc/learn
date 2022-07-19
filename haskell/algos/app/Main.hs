@@ -28,7 +28,7 @@ db0 = [ ( "movie"
 main :: IO ()
 main = do
   let e = enum 5
-  show s
+  print e
 
 
-isLochNessMonster xs@('t':'r':'e':'e':' ':'f':'i':'d':'d':'y':_) = f . words . map toLower
+--isLochNessMonster xs@('t':'r':'e':'e':' ':'f':'i':'d':'d':'y':_) = f . words . map toLower

@@ -2,10 +2,16 @@
 
 import Test.Hspec
 import qualified SimpleSQLEngineSpec
+import qualified RegExpParserSpec
+import qualified UnlimitedGameOfLifeSpec
+import qualified SingletonsSpec
 
 main :: IO ()
 main = hspec spec
 
 spec :: Spec
 spec = do
-  describe "SQLEngine" SimpleSQLEngineSpec.spec
+  describe "Singletons" SingletonsSpec.spec
+--  describe "SQLEngine" SimpleSQLEngineSpec.spec
+--  describe "RegExpParser" RegExpParserSpec.spec
+--  describe "GameOfLife" UnlimitedGameOfLifeSpec.spec
